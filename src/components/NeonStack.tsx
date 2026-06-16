@@ -627,7 +627,7 @@ export default function NeonStack() {
       <div ref={wrapRef} className="relative flex-1 mx-2 my-1 rounded-xl overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0" />
         {phase !== "playing" && <Overlay phase={phase} stats={stats} score={score} lines={lines} time={elapsed}
-          onStart={startGame} onResume={() => setPhase("playing")} />}
+          onStart={startGame} onResume={() => setPhase("playing")} onAbout={() => setShowAbout(true)} />}
       </div>
 
       {/* Control buttons */}
@@ -735,7 +735,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume,
+  phase, stats, score, lines, time, onStart, onResume, onAbout,
 }: {
   phase: Phase;
   stats: Stats;
@@ -744,6 +744,7 @@ function Overlay({
   time: number;
   onStart: () => void;
   onResume: () => void;
+  onAbout: () => void;
 }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm bg-background/70 p-4 text-center">
