@@ -764,6 +764,12 @@ function Overlay({
             <div>Lines: <span className="text-foreground tabular-nums">{stats.bestLines}</span></div>
             <div>Games: <span className="text-foreground tabular-nums">{stats.gamesPlayed}</span></div>
           </div>
+          <button
+            onClick={onAbout}
+            className="mt-6 text-[10px] tracking-[0.3em] text-muted-foreground/70 hover:text-foreground"
+          >
+            ABOUT
+          </button>
         </>
       )}
       {phase === "paused" && (
