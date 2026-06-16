@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import haiderIntro from "@/assets/haider-intro.png.asset.json";
+import soundtrack from "@/assets/soundtrack.mp3.asset.json";
 import {
   Bag,
   Board,
@@ -22,11 +24,12 @@ import {
 } from "@/lib/tetris";
 
 type ControlMode = "buttons" | "swipe" | "both";
-type Phase = "menu" | "playing" | "paused" | "over";
+type Phase = "intro" | "menu" | "playing" | "paused" | "over" | "about";
 
 interface Settings {
   ghost: boolean;
   sound: boolean;
+  music: boolean;
   control: ControlMode;
   swipeSensitivity: number; // px per cell
 }
@@ -34,6 +37,7 @@ interface Settings {
 const DEFAULT_SETTINGS: Settings = {
   ghost: true,
   sound: true,
+  music: true,
   control: "both",
   swipeSensitivity: 24,
 };
@@ -93,10 +97,55 @@ function beep(freq: number, dur = 0.05, type: OscillatorType = "square", vol = 0
 }
 
 export default function NeonStack() {
-  const [phase, setPhase] = useState<Phase>("menu");
-  const [settings, setSettings] = useState<Settings>(loadSettings);
-  const [stats, setStats] = useState<Stats>(loadStats);
+  const [phase, setPhase] = useState<Phase>("intro");
+  // Use defaults on server to avoid hydration mismatch; hydrate from
+  // localStorage after mount.
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [stats, setStats] = useState<Stats>({ bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setSettings(loadSettings());
+    setStats(loadStats());
+    setMounted(true);
+  }, []);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
+
+  // Auto-dismiss intro after 3.2s
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const t = setTimeout(() => setPhase("menu"), 3200);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Background music — always on unless disabled in settings.
+  // Browsers block autoplay until first user gesture; we attempt play on any
+  // pointer/keydown and also whenever the music setting flips on.
+  useEffect(() => {
+    const audio = musicRef.current;
+    if (!audio) return;
+    audio.volume = 0.45;
+    audio.loop = true;
+    if (settings.music) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [settings.music]);
+
+  useEffect(() => {
+    const tryPlay = () => {
+      const a = musicRef.current;
+      if (a && settingsRef.current.music && a.paused) a.play().catch(() => {});
+    };
+    window.addEventListener("pointerdown", tryPlay);
+    window.addEventListener("keydown", tryPlay);
+    return () => {
+      window.removeEventListener("pointerdown", tryPlay);
+      window.removeEventListener("keydown", tryPlay);
+    };
+  }, []);
 
   // Live HUD state
   const [score, setScore] = useState(0);
@@ -529,6 +578,24 @@ export default function NeonStack() {
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-background text-foreground overflow-hidden">
+      {/* Background soundtrack — always on unless disabled in settings */}
+      <audio ref={musicRef} src={soundtrack.url} preload="auto" loop />
+
+      {/* Intro splash — Developed by Haider */}
+      {phase === "intro" && (
+        <div
+          onClick={() => setPhase("menu")}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black cursor-pointer animate-in fade-in"
+        >
+          <img
+            src={haiderIntro.url}
+            alt="Developed by Haider"
+            className="w-full h-full object-contain"
+            draggable={false}
+          />
+        </div>
+      )}
+
       {/* Top HUD */}
       <div className="flex items-center justify-between px-3 pt-3 pb-1 text-xs">
         <div className="flex gap-3">
@@ -568,7 +635,7 @@ export default function NeonStack() {
       <div ref={wrapRef} className="relative flex-1 mx-2 my-1 rounded-xl overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0" />
         {phase !== "playing" && <Overlay phase={phase} stats={stats} score={score} lines={lines} time={elapsed}
-          onStart={startGame} onResume={() => setPhase("playing")} />}
+          onStart={startGame} onResume={() => setPhase("playing")} onAbout={() => setShowAbout(true)} />}
       </div>
 
       {/* Control buttons */}
@@ -593,6 +660,7 @@ export default function NeonStack() {
       )}
 
       {showSettings && <SettingsPanel settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} stats={stats} />}
+      {showAbout && <AboutPanel onClose={() => setShowAbout(false)} />}
     </div>
   );
 }
@@ -675,7 +743,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume,
+  phase, stats, score, lines, time, onStart, onResume, onAbout,
 }: {
   phase: Phase;
   stats: Stats;
@@ -684,17 +752,19 @@ function Overlay({
   time: number;
   onStart: () => void;
   onResume: () => void;
+  onAbout: () => void;
 }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm bg-background/70 p-4 text-center">
       {phase === "menu" && (
         <>
-          <h1 className="text-4xl font-black tracking-widest mb-1" style={{
+          <h1 className="text-5xl font-black tracking-[0.3em] mb-1" style={{
             background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             textShadow: "0 0 24px rgba(120,200,255,0.3)",
-          }}>NEON STACK</h1>
-          <p className="text-xs text-muted-foreground mb-6 tracking-widest">FALLING BLOCK PUZZLE</p>
+          }}>HETRIS</h1>
+          <p className="text-xs text-muted-foreground mb-1 tracking-widest">FALLING BLOCK PUZZLE</p>
+          <p className="text-[10px] text-muted-foreground/70 mb-6 tracking-[0.25em]">BY HAIDER</p>
           <button onClick={onStart} className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider shadow-[0_0_24px_var(--piece-i)]">
             PLAY
           </button>
@@ -703,6 +773,12 @@ function Overlay({
             <div>Lines: <span className="text-foreground tabular-nums">{stats.bestLines}</span></div>
             <div>Games: <span className="text-foreground tabular-nums">{stats.gamesPlayed}</span></div>
           </div>
+          <button
+            onClick={onAbout}
+            className="mt-6 text-[10px] tracking-[0.3em] text-muted-foreground/70 hover:text-foreground"
+          >
+            ABOUT
+          </button>
         </>
       )}
       {phase === "paused" && (
@@ -763,6 +839,9 @@ function SettingsPanel({
         <Row label="Sound">
           <Toggle on={settings.sound} onChange={(v) => setSettings({ ...settings, sound: v })} />
         </Row>
+        <Row label="Music">
+          <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
+        </Row>
         <Row label="Controls">
           <div className="flex gap-1">
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
@@ -803,5 +882,51 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     <button onClick={() => onChange(!on)} className={`w-11 h-6 rounded-full transition ${on ? "bg-primary" : "bg-muted"} relative`}>
       <span className={`absolute top-0.5 ${on ? "left-5" : "left-0.5"} w-5 h-5 rounded-full bg-background transition-all`} />
     </button>
+  );
+}
+
+function AboutPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-6"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold tracking-[0.3em]">ABOUT</h3>
+          <button onClick={onClose} className="text-muted-foreground">✕</button>
+        </div>
+        <h1
+          className="text-4xl font-black tracking-[0.3em]"
+          style={{
+            background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          HETRIS
+        </h1>
+        <p className="text-xs tracking-[0.25em] text-muted-foreground">
+          A FALLING BLOCK PUZZLE
+        </p>
+        <div className="pt-4 border-t border-border">
+          <p className="text-[10px] tracking-[0.4em] text-muted-foreground/70 mb-2">
+            DEVELOPED BY
+          </p>
+          <p
+            className="text-3xl font-bold tracking-[0.25em]"
+            style={{ color: "#f5c518", textShadow: "0 0 18px rgba(245,197,24,0.35)" }}
+          >
+            HAIDER
+          </p>
+        </div>
+        <p className="text-[10px] text-muted-foreground/60 pt-2">
+          Offline · Ad-free · Pure skill
+        </p>
+      </div>
+    </div>
   );
 }
