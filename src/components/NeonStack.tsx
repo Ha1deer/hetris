@@ -831,6 +831,9 @@ function SettingsPanel({
         <Row label="Sound">
           <Toggle on={settings.sound} onChange={(v) => setSettings({ ...settings, sound: v })} />
         </Row>
+        <Row label="Music">
+          <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
+        </Row>
         <Row label="Controls">
           <div className="flex gap-1">
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
