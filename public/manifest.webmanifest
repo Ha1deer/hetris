@@ -1,7 +1,7 @@
 {
-  "name": "Neon Stack",
-  "short_name": "Neon Stack",
-  "description": "A neon falling-block puzzle game. Offline. No ads. Pure skill.",
+  "name": "HETRIS",
+  "short_name": "HETRIS",
+  "description": "HETRIS — a falling-block puzzle game by Haider. Offline. No ads. Pure skill.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
