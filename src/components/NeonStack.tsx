@@ -876,3 +876,49 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     </button>
   );
 }
+
+function AboutPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-6"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold tracking-[0.3em]">ABOUT</h3>
+          <button onClick={onClose} className="text-muted-foreground">✕</button>
+        </div>
+        <h1
+          className="text-4xl font-black tracking-[0.3em]"
+          style={{
+            background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          HETRIS
+        </h1>
+        <p className="text-xs tracking-[0.25em] text-muted-foreground">
+          A FALLING BLOCK PUZZLE
+        </p>
+        <div className="pt-4 border-t border-border">
+          <p className="text-[10px] tracking-[0.4em] text-muted-foreground/70 mb-2">
+            DEVELOPED BY
+          </p>
+          <p
+            className="text-3xl font-bold tracking-[0.25em]"
+            style={{ color: "#f5c518", textShadow: "0 0 18px rgba(245,197,24,0.35)" }}
+          >
+            HAIDER
+          </p>
+        </div>
+        <p className="text-[10px] text-muted-foreground/60 pt-2">
+          Offline · Ad-free · Pure skill
+        </p>
+      </div>
+    </div>
+  );
+}
