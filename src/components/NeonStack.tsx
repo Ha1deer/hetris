@@ -98,8 +98,16 @@ function beep(freq: number, dur = 0.05, type: OscillatorType = "square", vol = 0
 
 export default function NeonStack() {
   const [phase, setPhase] = useState<Phase>("intro");
-  const [settings, setSettings] = useState<Settings>(loadSettings);
-  const [stats, setStats] = useState<Stats>(loadStats);
+  // Use defaults on server to avoid hydration mismatch; hydrate from
+  // localStorage after mount.
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [stats, setStats] = useState<Stats>({ bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setSettings(loadSettings());
+    setStats(loadStats());
+    setMounted(true);
+  }, []);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
