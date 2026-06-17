@@ -765,7 +765,7 @@ function CtrlBtn({
       onPointerUp={() => onPressEnd?.()}
       onPointerLeave={() => onPressEnd?.()}
       onPointerCancel={() => onPressEnd?.()}
-      className={`select-none flex flex-col items-center justify-center gap-0.5 active:scale-95 active:bg-primary/20 transition rounded-2xl border border-white/10 bg-white/[0.04] text-foreground backdrop-blur-md ${big ? "h-16" : "h-14"} ${wide ? "w-full flex-row gap-2" : ""}`}
+      className={`select-none flex flex-col items-center justify-center gap-0.5 active:scale-95 active:bg-primary/20 transition rounded-xl border border-white/10 bg-white/[0.04] text-foreground backdrop-blur-md ${wide ? "h-10 w-full flex-row gap-2" : "h-12"}`}
       style={{
         touchAction: "none",
         boxShadow:
