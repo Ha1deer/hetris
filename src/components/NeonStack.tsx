@@ -606,65 +606,87 @@ export default function NeonStack() {
         </div>
       )}
 
-      {/* Top HUD */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-1 text-xs">
-        <div className="flex gap-3">
-          <Stat label="SCORE" value={score.toString()} />
-          <Stat label="LINES" value={lines.toString()} />
-          <Stat label="LVL" value={level.toString()} />
+      {/* Top HUD — only visible during active gameplay states */}
+      {phase !== "menu" && phase !== "intro" && (
+        <div className="relative z-10 flex items-center justify-between px-3 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 text-xs">
+          <div className="flex gap-3">
+            <Stat label="SCORE" value={score.toString()} />
+            <Stat label="LINES" value={lines.toString()} />
+            <Stat label="LVL" value={level.toString()} />
+            <Stat label="TIME" value={mmss(elapsed)} />
+          </div>
+          <div className="flex gap-1.5 items-center">
+            <IconBtn onClick={() => setPhase("menu")} label="Home"><HomeIcon /></IconBtn>
+            <IconBtn onClick={() => setShowSettings(true)} label="Settings"><GearIcon /></IconBtn>
+            {phase === "playing" && (
+              <IconBtn onClick={() => setPhase("paused")} label="Pause"><PauseIcon /></IconBtn>
+            )}
+          </div>
         </div>
-        <div className="flex gap-3 items-center">
-          <Stat label="TIME" value={mmss(elapsed)} />
-          <button
-            onClick={() => setShowSettings(true)}
-            className="px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground"
-            aria-label="Settings"
-          >⚙</button>
-          {phase === "playing" && (
-            <button
-              onClick={() => setPhase("paused")}
-              className="px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground"
-              aria-label="Pause"
-            >⏸</button>
-          )}
-        </div>
-      </div>
+      )}
 
-      {/* Side info: Hold + Next */}
-      <div className="flex items-start justify-between px-3 py-1 gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-        <MiniBox label="Hold" piece={holdRef.current} />
-        <div className="flex gap-1.5">
-          <span className="text-muted-foreground self-center mr-1">Next</span>
-          {nextRef.current.slice(0, 5).map((p, i) => (
-            <MiniBox key={i} piece={p} small />
-          ))}
-        </div>
-      </div>
-
-      {/* Board */}
-      <div ref={wrapRef} className="relative flex-1 mx-2 my-1 rounded-xl overflow-hidden">
+      {/* Board — fills the full available area, edge to edge */}
+      <div ref={wrapRef} className="relative flex-1 overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0" />
-        {phase !== "playing" && <Overlay phase={phase} stats={stats} score={score} lines={lines} time={elapsed}
-          onStart={startGame} onResume={() => setPhase("playing")} onAbout={() => setShowAbout(true)} />}
+
+        {/* Floating Hold + Next overlay (only during play / pause) */}
+        {phase !== "menu" && phase !== "intro" && phase !== "over" && (
+          <>
+            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+              <FloatingBox label="HOLD" piece={holdRef.current} />
+            </div>
+            <div className="absolute top-2 right-2 z-10 pointer-events-none flex flex-col items-end gap-1">
+              <span className="text-[9px] tracking-[0.25em] text-foreground/60">NEXT</span>
+              <div className="flex flex-col gap-1">
+                {nextRef.current.slice(0, 4).map((p, i) => (
+                  <FloatingBox key={i} piece={p} small />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {phase !== "playing" && (
+          <Overlay
+            phase={phase}
+            stats={stats}
+            score={score}
+            lines={lines}
+            time={elapsed}
+            onStart={startGame}
+            onResume={() => setPhase("playing")}
+            onAbout={() => setShowAbout(true)}
+            onSettings={() => setShowSettings(true)}
+            onHome={() => setPhase("menu")}
+          />
+        )}
+
+        {/* First-time touch tips */}
+        {showTips && phase === "playing" && (
+          <TipsOverlay onClose={() => setShowTips(false)} />
+        )}
       </div>
 
-      {/* Control buttons */}
-      {(settings.control === "buttons" || settings.control === "both") && (
-        <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+      {/* Control buttons — hidden in menu */}
+      {phase !== "menu" && phase !== "intro" &&
+        (settings.control === "buttons" || settings.control === "both") && (
+        <div className="relative z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
           <div className="grid grid-cols-5 gap-2">
-            <CtrlBtn onPress={hold} label="HOLD" />
-            <CtrlBtn onPress={() => move(-1)} label="◀" big />
-            <CtrlBtn onPress={() => rotate(1)} label="⟳" big />
-            <CtrlBtn onPress={() => move(1)} label="▶" big />
-            <CtrlBtn onPress={hardDrop} label="DROP" />
+            <CtrlBtn onPress={hold} label="HOLD"><SwapIcon /></CtrlBtn>
+            <CtrlBtn onPress={() => move(-1)} big><ChevronIcon dir="left" /></CtrlBtn>
+            <CtrlBtn onPress={() => rotate(1)} big><RotateIcon /></CtrlBtn>
+            <CtrlBtn onPress={() => move(1)} big><ChevronIcon dir="right" /></CtrlBtn>
+            <CtrlBtn onPress={hardDrop} label="DROP"><DropIcon /></CtrlBtn>
           </div>
           <div className="mt-2">
             <CtrlBtn
               onPressStart={() => { softDropRef.current = true; }}
               onPressEnd={() => { softDropRef.current = false; }}
-              label="▼  SOFT DROP"
+              label="SOFT DROP"
               wide
-            />
+            >
+              <SoftDropIcon />
+            </CtrlBtn>
           </div>
         </div>
       )}
