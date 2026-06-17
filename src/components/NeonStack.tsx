@@ -199,6 +199,13 @@ export default function NeonStack() {
     setScore(0); setLines(0); setLevel(1); setCombo(0); setElapsed(0);
     spawnNext();
     setPhase("playing");
+    // First-time touch tips
+    try {
+      if (!localStorage.getItem(TIPS_KEY)) {
+        setShowTips(true);
+        localStorage.setItem(TIPS_KEY, "1");
+      }
+    } catch {}
   }, []);
 
   const spawnNext = useCallback(() => {
