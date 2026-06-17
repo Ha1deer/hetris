@@ -112,6 +112,7 @@ export default function NeonStack() {
   }, []);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showTips, setShowTips] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-dismiss intro after 3.2s
