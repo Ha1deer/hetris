@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import haiderIntro from "@/assets/haider-intro.png.asset.json";
 import soundtrack from "@/assets/soundtrack.mp3.asset.json";
+import menuBg from "@/assets/menu-bg.jpg.asset.json";
 import {
   Bag,
   Board,
@@ -45,6 +46,7 @@ const DEFAULT_SETTINGS: Settings = {
 const HS_KEY = "neonstack:highscore";
 const STATS_KEY = "neonstack:stats";
 const SET_KEY = "neonstack:settings";
+const TIPS_KEY = "neonstack:tipsSeen";
 
 interface Stats {
   bestScore: number;
@@ -110,6 +112,7 @@ export default function NeonStack() {
   }, []);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showTips, setShowTips] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-dismiss intro after 3.2s
@@ -196,6 +199,13 @@ export default function NeonStack() {
     setScore(0); setLines(0); setLevel(1); setCombo(0); setElapsed(0);
     spawnNext();
     setPhase("playing");
+    // First-time touch tips
+    try {
+      if (!localStorage.getItem(TIPS_KEY)) {
+        setShowTips(true);
+        localStorage.setItem(TIPS_KEY, "1");
+      }
+    } catch {}
   }, []);
 
   const spawnNext = useCallback(() => {
@@ -446,12 +456,15 @@ export default function NeonStack() {
     const ox = Math.floor((W - boardW) / 2);
     const oy = Math.floor((H - boardH) / 2);
 
-    // background panel
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
+    // subtle vertical lane gradient — gives depth without a hard frame
+    const grad = ctx.createLinearGradient(0, oy, 0, oy + boardH);
+    grad.addColorStop(0, "rgba(120, 200, 255, 0.04)");
+    grad.addColorStop(1, "rgba(180, 80, 220, 0.06)");
+    ctx.fillStyle = grad;
     ctx.fillRect(ox, oy, boardW, boardH);
 
     // grid
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.strokeStyle = "rgba(255,255,255,0.045)";
     ctx.lineWidth = 1;
     for (let x = 0; x <= COLS; x++) {
       ctx.beginPath();
@@ -465,11 +478,6 @@ export default function NeonStack() {
       ctx.lineTo(ox + boardW, oy + y * cell + 0.5);
       ctx.stroke();
     }
-
-    // border glow
-    ctx.strokeStyle = "rgba(120, 200, 255, 0.35)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(ox - 1, oy - 1, boardW + 2, boardH + 2);
 
     // board cells
     const b = boardRef.current;
@@ -596,65 +604,87 @@ export default function NeonStack() {
         </div>
       )}
 
-      {/* Top HUD */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-1 text-xs">
-        <div className="flex gap-3">
-          <Stat label="SCORE" value={score.toString()} />
-          <Stat label="LINES" value={lines.toString()} />
-          <Stat label="LVL" value={level.toString()} />
+      {/* Top HUD — only visible during active gameplay states */}
+      {phase !== "menu" && phase !== "intro" && (
+        <div className="relative z-10 flex items-center justify-between px-3 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 text-xs">
+          <div className="flex gap-3">
+            <Stat label="SCORE" value={score.toString()} />
+            <Stat label="LINES" value={lines.toString()} />
+            <Stat label="LVL" value={level.toString()} />
+            <Stat label="TIME" value={mmss(elapsed)} />
+          </div>
+          <div className="flex gap-1.5 items-center">
+            <IconBtn onClick={() => setPhase("menu")} label="Home"><HomeIcon /></IconBtn>
+            <IconBtn onClick={() => setShowSettings(true)} label="Settings"><GearIcon /></IconBtn>
+            {phase === "playing" && (
+              <IconBtn onClick={() => setPhase("paused")} label="Pause"><PauseIcon /></IconBtn>
+            )}
+          </div>
         </div>
-        <div className="flex gap-3 items-center">
-          <Stat label="TIME" value={mmss(elapsed)} />
-          <button
-            onClick={() => setShowSettings(true)}
-            className="px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground"
-            aria-label="Settings"
-          >⚙</button>
-          {phase === "playing" && (
-            <button
-              onClick={() => setPhase("paused")}
-              className="px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground"
-              aria-label="Pause"
-            >⏸</button>
-          )}
-        </div>
-      </div>
+      )}
 
-      {/* Side info: Hold + Next */}
-      <div className="flex items-start justify-between px-3 py-1 gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-        <MiniBox label="Hold" piece={holdRef.current} />
-        <div className="flex gap-1.5">
-          <span className="text-muted-foreground self-center mr-1">Next</span>
-          {nextRef.current.slice(0, 5).map((p, i) => (
-            <MiniBox key={i} piece={p} small />
-          ))}
-        </div>
-      </div>
-
-      {/* Board */}
-      <div ref={wrapRef} className="relative flex-1 mx-2 my-1 rounded-xl overflow-hidden">
+      {/* Board — fills the full available area, edge to edge */}
+      <div ref={wrapRef} className="relative flex-1 overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0" />
-        {phase !== "playing" && <Overlay phase={phase} stats={stats} score={score} lines={lines} time={elapsed}
-          onStart={startGame} onResume={() => setPhase("playing")} onAbout={() => setShowAbout(true)} />}
+
+        {/* Floating Hold + Next overlay (only during play / pause) */}
+        {phase !== "menu" && phase !== "intro" && phase !== "over" && (
+          <>
+            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+              <FloatingBox label="HOLD" piece={holdRef.current} />
+            </div>
+            <div className="absolute top-2 right-2 z-10 pointer-events-none flex flex-col items-end gap-1">
+              <span className="text-[9px] tracking-[0.25em] text-foreground/60">NEXT</span>
+              <div className="flex flex-col gap-1">
+                {nextRef.current.slice(0, 4).map((p, i) => (
+                  <FloatingBox key={i} piece={p} small />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {phase !== "playing" && (
+          <Overlay
+            phase={phase}
+            stats={stats}
+            score={score}
+            lines={lines}
+            time={elapsed}
+            onStart={startGame}
+            onResume={() => setPhase("playing")}
+            onAbout={() => setShowAbout(true)}
+            onSettings={() => setShowSettings(true)}
+            onHome={() => setPhase("menu")}
+          />
+        )}
+
+        {/* First-time touch tips */}
+        {showTips && phase === "playing" && (
+          <TipsOverlay onClose={() => setShowTips(false)} />
+        )}
       </div>
 
-      {/* Control buttons */}
-      {(settings.control === "buttons" || settings.control === "both") && (
-        <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+      {/* Control buttons — hidden in menu */}
+      {phase !== "menu" && phase !== "intro" &&
+        (settings.control === "buttons" || settings.control === "both") && (
+        <div className="relative z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
           <div className="grid grid-cols-5 gap-2">
-            <CtrlBtn onPress={hold} label="HOLD" />
-            <CtrlBtn onPress={() => move(-1)} label="◀" big />
-            <CtrlBtn onPress={() => rotate(1)} label="⟳" big />
-            <CtrlBtn onPress={() => move(1)} label="▶" big />
-            <CtrlBtn onPress={hardDrop} label="DROP" />
+            <CtrlBtn onPress={hold} label="HOLD"><SwapIcon /></CtrlBtn>
+            <CtrlBtn onPress={() => move(-1)} big><ChevronIcon dir="left" /></CtrlBtn>
+            <CtrlBtn onPress={() => rotate(1)} big><RotateIcon /></CtrlBtn>
+            <CtrlBtn onPress={() => move(1)} big><ChevronIcon dir="right" /></CtrlBtn>
+            <CtrlBtn onPress={hardDrop} label="DROP"><DropIcon /></CtrlBtn>
           </div>
           <div className="mt-2">
             <CtrlBtn
               onPressStart={() => { softDropRef.current = true; }}
               onPressEnd={() => { softDropRef.current = false; }}
-              label="▼  SOFT DROP"
+              label="SOFT DROP"
               wide
-            />
+            >
+              <SoftDropIcon />
+            </CtrlBtn>
           </div>
         </div>
       )}
@@ -715,14 +745,15 @@ function MiniPiece({ p, size }: { p: PieceKey; size: number }) {
 }
 
 function CtrlBtn({
-  onPress, onPressStart, onPressEnd, label, big, wide,
+  onPress, onPressStart, onPressEnd, label, big, wide, children,
 }: {
   onPress?: () => void;
   onPressStart?: () => void;
   onPressEnd?: () => void;
-  label: string;
+  label?: string;
   big?: boolean;
   wide?: boolean;
+  children?: React.ReactNode;
 }) {
   return (
     <button
@@ -734,16 +765,25 @@ function CtrlBtn({
       onPointerUp={() => onPressEnd?.()}
       onPointerLeave={() => onPressEnd?.()}
       onPointerCancel={() => onPressEnd?.()}
-      className={`select-none active:scale-95 active:bg-secondary/80 transition rounded-xl border border-border bg-card/80 text-foreground font-semibold ${big ? "h-14 text-lg" : "h-12 text-sm"} ${wide ? "w-full" : ""}`}
-      style={{ touchAction: "none", boxShadow: "inset 0 0 0 1px rgba(120,200,255,0.08), 0 0 12px rgba(120,200,255,0.05)" }}
+      className={`select-none flex flex-col items-center justify-center gap-0.5 active:scale-95 active:bg-primary/20 transition rounded-2xl border border-white/10 bg-white/[0.04] text-foreground backdrop-blur-md ${big ? "h-16" : "h-14"} ${wide ? "w-full flex-row gap-2" : ""}`}
+      style={{
+        touchAction: "none",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(120,200,255,0.06), 0 6px 20px -8px rgba(120,200,255,0.25)",
+      }}
     >
-      {label}
+      {children}
+      {label && (
+        <span className="text-[9px] tracking-[0.2em] text-foreground/70 font-semibold">
+          {label}
+        </span>
+      )}
     </button>
   );
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume, onAbout,
+  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome,
 }: {
   phase: Phase;
   stats: Stats;
@@ -753,56 +793,145 @@ function Overlay({
   onStart: () => void;
   onResume: () => void;
   onAbout: () => void;
+  onSettings: () => void;
+  onHome: () => void;
 }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm bg-background/70 p-4 text-center">
+    <div
+      className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
+      style={
+        phase === "menu"
+          ? {
+              backgroundImage: `linear-gradient(180deg, rgba(8,6,22,0.55) 0%, rgba(8,6,22,0.85) 100%), url(${menuBg.url})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : { backdropFilter: "blur(10px)", background: "rgba(8,6,22,0.78)" }
+      }
+    >
       {phase === "menu" && (
-        <>
-          <h1 className="text-5xl font-black tracking-[0.3em] mb-1" style={{
-            background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            textShadow: "0 0 24px rgba(120,200,255,0.3)",
-          }}>HETRIS</h1>
-          <p className="text-xs text-muted-foreground mb-1 tracking-widest">FALLING BLOCK PUZZLE</p>
-          <p className="text-[10px] text-muted-foreground/70 mb-6 tracking-[0.25em]">BY HAIDER</p>
-          <button onClick={onStart} className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider shadow-[0_0_24px_var(--piece-i)]">
-            PLAY
-          </button>
-          <div className="mt-8 text-xs text-muted-foreground space-y-1">
-            <div>Best: <span className="text-foreground tabular-nums">{stats.bestScore}</span></div>
-            <div>Lines: <span className="text-foreground tabular-nums">{stats.bestLines}</span></div>
-            <div>Games: <span className="text-foreground tabular-nums">{stats.gamesPlayed}</span></div>
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs">
+          <div className="mb-10 text-center">
+            <h1
+              className="text-6xl font-black tracking-[0.25em] leading-none"
+              style={{
+                background:
+                  "linear-gradient(120deg, var(--piece-i), var(--accent), var(--piece-i))",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "hetris-shine 4s linear infinite",
+                filter: "drop-shadow(0 0 24px rgba(120,200,255,0.45))",
+              }}
+            >
+              HETRIS
+            </h1>
+            <p className="mt-3 text-[10px] tracking-[0.5em] text-foreground/60">
+              BY HAIDER
+            </p>
           </div>
+
           <button
-            onClick={onAbout}
-            className="mt-6 text-[10px] tracking-[0.3em] text-muted-foreground/70 hover:text-foreground"
+            onClick={onStart}
+            className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(120deg, var(--piece-i), var(--accent))",
+              boxShadow:
+                "0 10px 40px -10px var(--piece-i), inset 0 1px 0 rgba(255,255,255,0.4)",
+            }}
           >
-            ABOUT
+            <span className="relative z-10 flex items-center justify-center gap-3">
+              <PlayIcon /> PLAY
+            </span>
           </button>
-        </>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 w-full">
+            <button
+              onClick={onSettings}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
+            >
+              <GearIcon /> SETTINGS
+            </button>
+            <button
+              onClick={onAbout}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
+            >
+              <InfoIcon /> ABOUT
+            </button>
+          </div>
+
+          <div className="mt-10 w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-4">
+            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">
+              PERSONAL BEST
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <BestStat label="SCORE" value={stats.bestScore} />
+              <BestStat label="LINES" value={stats.bestLines} />
+              <BestStat label="GAMES" value={stats.gamesPlayed} />
+            </div>
+          </div>
+        </div>
       )}
+
       {phase === "paused" && (
-        <>
-          <h2 className="text-2xl font-bold tracking-widest mb-6">PAUSED</h2>
-          <button onClick={onResume} className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider mb-2">RESUME</button>
-          <button onClick={onStart} className="px-6 py-2 rounded-xl border border-border text-foreground text-sm">RESTART</button>
-        </>
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95">
+          <PauseIcon size={48} />
+          <h2 className="mt-3 text-3xl font-black tracking-[0.3em]">PAUSED</h2>
+          <div className="mt-8 flex flex-col gap-2 w-56">
+            <button
+              onClick={onResume}
+              className="py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-[0.25em] flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{ boxShadow: "0 8px 30px -8px var(--piece-i)" }}
+            >
+              <PlayIcon /> RESUME
+            </button>
+            <button
+              onClick={onStart}
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground text-xs tracking-[0.3em] active:scale-95 transition"
+            >
+              RESTART
+            </button>
+            <button
+              onClick={onHome}
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.3em] flex items-center justify-center gap-2 active:scale-95 transition"
+            >
+              <HomeIcon /> MAIN MENU
+            </button>
+          </div>
+        </div>
       )}
+
       {phase === "over" && (
-        <>
-          <h2 className="text-2xl font-bold tracking-widest mb-1">GAME OVER</h2>
-          <p className="text-xs text-muted-foreground mb-4">
-            {score >= stats.bestScore && score > 0 ? "NEW PERSONAL BEST" : "Run complete"}
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95">
+          <h2 className="text-3xl font-black tracking-[0.3em]">GAME OVER</h2>
+          <p
+            className="mt-2 text-[10px] tracking-[0.4em]"
+            style={{ color: score >= stats.bestScore && score > 0 ? "var(--accent)" : "var(--muted-foreground)" }}
+          >
+            {score >= stats.bestScore && score > 0 ? "★ NEW PERSONAL BEST ★" : "RUN COMPLETE"}
           </p>
-          <div className="grid grid-cols-3 gap-3 mb-6 text-xs">
+          <div className="grid grid-cols-3 gap-3 mt-6 mb-6 text-xs">
             <Result label="SCORE" value={score} />
             <Result label="LINES" value={lines} />
             <Result label="TIME" value={`${Math.floor(time / 60)}:${String(time % 60).padStart(2, "0")}`} />
           </div>
-          <button onClick={onStart} className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider shadow-[0_0_24px_var(--piece-i)]">
-            PLAY AGAIN
-          </button>
-        </>
+          <div className="flex flex-col gap-2 w-56">
+            <button
+              onClick={onStart}
+              className="py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-[0.25em] flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{ boxShadow: "0 8px 30px -8px var(--piece-i)" }}
+            >
+              <RotateIcon /> PLAY AGAIN
+            </button>
+            <button
+              onClick={onHome}
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.3em] flex items-center justify-center gap-2 active:scale-95 transition"
+            >
+              <HomeIcon /> MAIN MENU
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -930,3 +1059,205 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+/* ---------- HUD pieces ---------- */
+
+function IconBtn({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="w-9 h-9 grid place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 backdrop-blur-md active:scale-90 active:text-foreground transition"
+    >
+      {children}
+    </button>
+  );
+}
+
+function FloatingBox({
+  label,
+  piece,
+  small,
+}: {
+  label?: string;
+  piece: PieceKey | null;
+  small?: boolean;
+}) {
+  const cell = small ? 7 : 10;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {label && (
+        <span className="text-[9px] tracking-[0.25em] text-foreground/60">
+          {label}
+        </span>
+      )}
+      <div
+        className="rounded-lg border border-white/10 bg-black/40 backdrop-blur-md p-1.5"
+        style={{ width: cell * 5, height: cell * 3 }}
+      >
+        {piece && <MiniPiece p={piece} size={cell} />}
+      </div>
+    </div>
+  );
+}
+
+function BestStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="text-base font-bold tabular-nums">{value}</span>
+      <span className="text-[8px] tracking-[0.2em] text-foreground/50">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function TipsOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-md p-6 animate-in fade-in"
+    >
+      <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-card/80 p-5 text-center">
+        <p className="text-[10px] tracking-[0.4em] text-foreground/60 mb-3">
+          TOUCH CONTROLS
+        </p>
+        <h3 className="text-lg font-black tracking-[0.25em] mb-5">HOW TO PLAY</h3>
+        <ul className="space-y-3 text-left text-xs">
+          <Tip icon={<ChevronIcon dir="left" />}>
+            <b>Swipe left / right</b> — move piece
+          </Tip>
+          <Tip icon={<RotateIcon />}>
+            <b>Tap</b> — rotate piece
+          </Tip>
+          <Tip icon={<SoftDropIcon />}>
+            <b>Swipe down</b> — soft drop
+          </Tip>
+          <Tip icon={<DropIcon />}>
+            <b>Fast swipe down</b> — hard drop
+          </Tip>
+          <Tip icon={<SwapIcon />}>
+            <b>HOLD</b> — stash a piece for later
+          </Tip>
+        </ul>
+        <button className="mt-6 w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold tracking-[0.3em] active:scale-95 transition">
+          GOT IT
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Tip({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex items-center gap-3">
+      <span className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-primary shrink-0">
+        {icon}
+      </span>
+      <span className="text-foreground/85">{children}</span>
+    </li>
+  );
+}
+
+/* ---------- Inline SVG icons ---------- */
+
+const Svg = ({
+  size = 18,
+  children,
+}: {
+  size?: number;
+  children: React.ReactNode;
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {children}
+  </svg>
+);
+
+const HomeIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M3 11l9-8 9 8" />
+    <path d="M5 10v10h14V10" />
+    <path d="M10 20v-6h4v6" />
+  </Svg>
+);
+const GearIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </Svg>
+);
+const PauseIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <rect x="6" y="5" width="4" height="14" rx="1" />
+    <rect x="14" y="5" width="4" height="14" rx="1" />
+  </Svg>
+);
+const PlayIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M6 4l14 8-14 8V4z" fill="currentColor" stroke="none" />
+  </Svg>
+);
+const InfoIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-5" />
+    <circle cx="12" cy="8" r="0.6" fill="currentColor" />
+  </Svg>
+);
+const ChevronIcon = ({ dir, size }: { dir: "left" | "right"; size?: number }) => (
+  <Svg size={size ?? 22}>
+    {dir === "left" ? (
+      <path d="M15 6l-6 6 6 6" />
+    ) : (
+      <path d="M9 6l6 6-6 6" />
+    )}
+  </Svg>
+);
+const RotateIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 22}>
+    <path d="M21 12a9 9 0 1 1-3.2-6.9" />
+    <path d="M21 4v5h-5" />
+  </Svg>
+);
+const DropIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 20}>
+    <path d="M12 3v12" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M5 20h14" />
+  </Svg>
+);
+const SoftDropIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 18}>
+    <path d="M12 4v14" />
+    <path d="M7 13l5 5 5-5" />
+  </Svg>
+);
+const SwapIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 18}>
+    <path d="M7 7h11l-3-3" />
+    <path d="M17 17H6l3 3" />
+  </Svg>
+);
