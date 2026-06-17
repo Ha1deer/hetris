@@ -456,12 +456,15 @@ export default function NeonStack() {
     const ox = Math.floor((W - boardW) / 2);
     const oy = Math.floor((H - boardH) / 2);
 
-    // background panel
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
+    // subtle vertical lane gradient — gives depth without a hard frame
+    const grad = ctx.createLinearGradient(0, oy, 0, oy + boardH);
+    grad.addColorStop(0, "rgba(120, 200, 255, 0.04)");
+    grad.addColorStop(1, "rgba(180, 80, 220, 0.06)");
+    ctx.fillStyle = grad;
     ctx.fillRect(ox, oy, boardW, boardH);
 
     // grid
-    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.strokeStyle = "rgba(255,255,255,0.045)";
     ctx.lineWidth = 1;
     for (let x = 0; x <= COLS; x++) {
       ctx.beginPath();
@@ -475,11 +478,6 @@ export default function NeonStack() {
       ctx.lineTo(ox + boardW, oy + y * cell + 0.5);
       ctx.stroke();
     }
-
-    // border glow
-    ctx.strokeStyle = "rgba(120, 200, 255, 0.35)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(ox - 1, oy - 1, boardW + 2, boardH + 2);
 
     // board cells
     const b = boardRef.current;
