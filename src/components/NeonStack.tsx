@@ -624,7 +624,7 @@ export default function NeonStack() {
       )}
 
       {/* Board — fills the full available area, edge to edge */}
-      <div ref={wrapRef} className="relative flex-1 overflow-hidden">
+      <div ref={wrapRef} className="relative flex-1 min-h-0 overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0" />
 
         {/* Floating Hold + Next overlay (only during play / pause) */}
@@ -668,15 +668,15 @@ export default function NeonStack() {
       {/* Control buttons — hidden in menu */}
       {phase !== "menu" && phase !== "intro" &&
         (settings.control === "buttons" || settings.control === "both") && (
-        <div className="relative z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-          <div className="grid grid-cols-5 gap-2">
+        <div className="relative z-10 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shrink-0">
+          <div className="grid grid-cols-5 gap-1.5">
             <CtrlBtn onPress={hold} label="HOLD"><SwapIcon /></CtrlBtn>
-            <CtrlBtn onPress={() => move(-1)} big><ChevronIcon dir="left" /></CtrlBtn>
-            <CtrlBtn onPress={() => rotate(1)} big><RotateIcon /></CtrlBtn>
-            <CtrlBtn onPress={() => move(1)} big><ChevronIcon dir="right" /></CtrlBtn>
+            <CtrlBtn onPress={() => move(-1)}><ChevronIcon dir="left" /></CtrlBtn>
+            <CtrlBtn onPress={() => rotate(1)}><RotateIcon /></CtrlBtn>
+            <CtrlBtn onPress={() => move(1)}><ChevronIcon dir="right" /></CtrlBtn>
             <CtrlBtn onPress={hardDrop} label="DROP"><DropIcon /></CtrlBtn>
           </div>
-          <div className="mt-2">
+          <div className="mt-1.5">
             <CtrlBtn
               onPressStart={() => { softDropRef.current = true; }}
               onPressEnd={() => { softDropRef.current = false; }}
