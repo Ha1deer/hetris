@@ -1061,3 +1061,205 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+/* ---------- HUD pieces ---------- */
+
+function IconBtn({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="w-9 h-9 grid place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 backdrop-blur-md active:scale-90 active:text-foreground transition"
+    >
+      {children}
+    </button>
+  );
+}
+
+function FloatingBox({
+  label,
+  piece,
+  small,
+}: {
+  label?: string;
+  piece: PieceKey | null;
+  small?: boolean;
+}) {
+  const cell = small ? 7 : 10;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {label && (
+        <span className="text-[9px] tracking-[0.25em] text-foreground/60">
+          {label}
+        </span>
+      )}
+      <div
+        className="rounded-lg border border-white/10 bg-black/40 backdrop-blur-md p-1.5"
+        style={{ width: cell * 5, height: cell * 3 }}
+      >
+        {piece && <MiniPiece p={piece} size={cell} />}
+      </div>
+    </div>
+  );
+}
+
+function BestStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="text-base font-bold tabular-nums">{value}</span>
+      <span className="text-[8px] tracking-[0.2em] text-foreground/50">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function TipsOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-md p-6 animate-in fade-in"
+    >
+      <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-card/80 p-5 text-center">
+        <p className="text-[10px] tracking-[0.4em] text-foreground/60 mb-3">
+          TOUCH CONTROLS
+        </p>
+        <h3 className="text-lg font-black tracking-[0.25em] mb-5">HOW TO PLAY</h3>
+        <ul className="space-y-3 text-left text-xs">
+          <Tip icon={<ChevronIcon dir="left" />}>
+            <b>Swipe left / right</b> — move piece
+          </Tip>
+          <Tip icon={<RotateIcon />}>
+            <b>Tap</b> — rotate piece
+          </Tip>
+          <Tip icon={<SoftDropIcon />}>
+            <b>Swipe down</b> — soft drop
+          </Tip>
+          <Tip icon={<DropIcon />}>
+            <b>Fast swipe down</b> — hard drop
+          </Tip>
+          <Tip icon={<SwapIcon />}>
+            <b>HOLD</b> — stash a piece for later
+          </Tip>
+        </ul>
+        <button className="mt-6 w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold tracking-[0.3em] active:scale-95 transition">
+          GOT IT
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Tip({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex items-center gap-3">
+      <span className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-primary shrink-0">
+        {icon}
+      </span>
+      <span className="text-foreground/85">{children}</span>
+    </li>
+  );
+}
+
+/* ---------- Inline SVG icons ---------- */
+
+const Svg = ({
+  size = 18,
+  children,
+}: {
+  size?: number;
+  children: React.ReactNode;
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {children}
+  </svg>
+);
+
+const HomeIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M3 11l9-8 9 8" />
+    <path d="M5 10v10h14V10" />
+    <path d="M10 20v-6h4v6" />
+  </Svg>
+);
+const GearIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </Svg>
+);
+const PauseIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <rect x="6" y="5" width="4" height="14" rx="1" />
+    <rect x="14" y="5" width="4" height="14" rx="1" />
+  </Svg>
+);
+const PlayIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M6 4l14 8-14 8V4z" fill="currentColor" stroke="none" />
+  </Svg>
+);
+const InfoIcon = ({ size }: { size?: number }) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-5" />
+    <circle cx="12" cy="8" r="0.6" fill="currentColor" />
+  </Svg>
+);
+const ChevronIcon = ({ dir, size }: { dir: "left" | "right"; size?: number }) => (
+  <Svg size={size ?? 22}>
+    {dir === "left" ? (
+      <path d="M15 6l-6 6 6 6" />
+    ) : (
+      <path d="M9 6l6 6-6 6" />
+    )}
+  </Svg>
+);
+const RotateIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 22}>
+    <path d="M21 12a9 9 0 1 1-3.2-6.9" />
+    <path d="M21 4v5h-5" />
+  </Svg>
+);
+const DropIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 20}>
+    <path d="M12 3v12" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M5 20h14" />
+  </Svg>
+);
+const SoftDropIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 18}>
+    <path d="M12 4v14" />
+    <path d="M7 13l5 5 5-5" />
+  </Svg>
+);
+const SwapIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 18}>
+    <path d="M7 7h11l-3-3" />
+    <path d="M17 17H6l3 3" />
+  </Svg>
+);
