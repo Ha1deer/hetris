@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import haiderIntro from "@/assets/haider-intro.png.asset.json";
 import soundtrack from "@/assets/soundtrack.mp3.asset.json";
+import menuBg from "@/assets/menu-bg.jpg.asset.json";
 import {
   Bag,
   Board,
@@ -45,6 +46,7 @@ const DEFAULT_SETTINGS: Settings = {
 const HS_KEY = "neonstack:highscore";
 const STATS_KEY = "neonstack:stats";
 const SET_KEY = "neonstack:settings";
+const TIPS_KEY = "neonstack:tipsSeen";
 
 interface Stats {
   bestScore: number;
