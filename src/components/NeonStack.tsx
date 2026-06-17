@@ -785,7 +785,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume, onAbout,
+  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome,
 }: {
   phase: Phase;
   stats: Stats;
@@ -795,56 +795,145 @@ function Overlay({
   onStart: () => void;
   onResume: () => void;
   onAbout: () => void;
+  onSettings: () => void;
+  onHome: () => void;
 }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center backdrop-blur-sm bg-background/70 p-4 text-center">
+    <div
+      className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
+      style={
+        phase === "menu"
+          ? {
+              backgroundImage: `linear-gradient(180deg, rgba(8,6,22,0.55) 0%, rgba(8,6,22,0.85) 100%), url(${menuBg.url})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : { backdropFilter: "blur(10px)", background: "rgba(8,6,22,0.78)" }
+      }
+    >
       {phase === "menu" && (
-        <>
-          <h1 className="text-5xl font-black tracking-[0.3em] mb-1" style={{
-            background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-            textShadow: "0 0 24px rgba(120,200,255,0.3)",
-          }}>HETRIS</h1>
-          <p className="text-xs text-muted-foreground mb-1 tracking-widest">FALLING BLOCK PUZZLE</p>
-          <p className="text-[10px] text-muted-foreground/70 mb-6 tracking-[0.25em]">BY HAIDER</p>
-          <button onClick={onStart} className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider shadow-[0_0_24px_var(--piece-i)]">
-            PLAY
-          </button>
-          <div className="mt-8 text-xs text-muted-foreground space-y-1">
-            <div>Best: <span className="text-foreground tabular-nums">{stats.bestScore}</span></div>
-            <div>Lines: <span className="text-foreground tabular-nums">{stats.bestLines}</span></div>
-            <div>Games: <span className="text-foreground tabular-nums">{stats.gamesPlayed}</span></div>
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs">
+          <div className="mb-10 text-center">
+            <h1
+              className="text-6xl font-black tracking-[0.25em] leading-none"
+              style={{
+                background:
+                  "linear-gradient(120deg, var(--piece-i), var(--accent), var(--piece-i))",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "hetris-shine 4s linear infinite",
+                filter: "drop-shadow(0 0 24px rgba(120,200,255,0.45))",
+              }}
+            >
+              HETRIS
+            </h1>
+            <p className="mt-3 text-[10px] tracking-[0.5em] text-foreground/60">
+              BY HAIDER
+            </p>
           </div>
+
           <button
-            onClick={onAbout}
-            className="mt-6 text-[10px] tracking-[0.3em] text-muted-foreground/70 hover:text-foreground"
+            onClick={onStart}
+            className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(120deg, var(--piece-i), var(--accent))",
+              boxShadow:
+                "0 10px 40px -10px var(--piece-i), inset 0 1px 0 rgba(255,255,255,0.4)",
+            }}
           >
-            ABOUT
+            <span className="relative z-10 flex items-center justify-center gap-3">
+              <PlayIcon /> PLAY
+            </span>
           </button>
-        </>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 w-full">
+            <button
+              onClick={onSettings}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
+            >
+              <GearIcon /> SETTINGS
+            </button>
+            <button
+              onClick={onAbout}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
+            >
+              <InfoIcon /> ABOUT
+            </button>
+          </div>
+
+          <div className="mt-10 w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-4">
+            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">
+              PERSONAL BEST
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <BestStat label="SCORE" value={stats.bestScore} />
+              <BestStat label="LINES" value={stats.bestLines} />
+              <BestStat label="GAMES" value={stats.gamesPlayed} />
+            </div>
+          </div>
+        </div>
       )}
+
       {phase === "paused" && (
-        <>
-          <h2 className="text-2xl font-bold tracking-widest mb-6">PAUSED</h2>
-          <button onClick={onResume} className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider mb-2">RESUME</button>
-          <button onClick={onStart} className="px-6 py-2 rounded-xl border border-border text-foreground text-sm">RESTART</button>
-        </>
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95">
+          <PauseIcon size={48} />
+          <h2 className="mt-3 text-3xl font-black tracking-[0.3em]">PAUSED</h2>
+          <div className="mt-8 flex flex-col gap-2 w-56">
+            <button
+              onClick={onResume}
+              className="py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-[0.25em] flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{ boxShadow: "0 8px 30px -8px var(--piece-i)" }}
+            >
+              <PlayIcon /> RESUME
+            </button>
+            <button
+              onClick={onStart}
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground text-xs tracking-[0.3em] active:scale-95 transition"
+            >
+              RESTART
+            </button>
+            <button
+              onClick={onHome}
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.3em] flex items-center justify-center gap-2 active:scale-95 transition"
+            >
+              <HomeIcon /> MAIN MENU
+            </button>
+          </div>
+        </div>
       )}
+
       {phase === "over" && (
-        <>
-          <h2 className="text-2xl font-bold tracking-widest mb-1">GAME OVER</h2>
-          <p className="text-xs text-muted-foreground mb-4">
-            {score >= stats.bestScore && score > 0 ? "NEW PERSONAL BEST" : "Run complete"}
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95">
+          <h2 className="text-3xl font-black tracking-[0.3em]">GAME OVER</h2>
+          <p
+            className="mt-2 text-[10px] tracking-[0.4em]"
+            style={{ color: score >= stats.bestScore && score > 0 ? "var(--accent)" : "var(--muted-foreground)" }}
+          >
+            {score >= stats.bestScore && score > 0 ? "★ NEW PERSONAL BEST ★" : "RUN COMPLETE"}
           </p>
-          <div className="grid grid-cols-3 gap-3 mb-6 text-xs">
+          <div className="grid grid-cols-3 gap-3 mt-6 mb-6 text-xs">
             <Result label="SCORE" value={score} />
             <Result label="LINES" value={lines} />
             <Result label="TIME" value={`${Math.floor(time / 60)}:${String(time % 60).padStart(2, "0")}`} />
           </div>
-          <button onClick={onStart} className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-wider shadow-[0_0_24px_var(--piece-i)]">
-            PLAY AGAIN
-          </button>
-        </>
+          <div className="flex flex-col gap-2 w-56">
+            <button
+              onClick={onStart}
+              className="py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-[0.25em] flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{ boxShadow: "0 8px 30px -8px var(--piece-i)" }}
+            >
+              <RotateIcon /> PLAY AGAIN
+            </button>
+            <button
+              onClick={onHome}
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.3em] flex items-center justify-center gap-2 active:scale-95 transition"
+            >
+              <HomeIcon /> MAIN MENU
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
