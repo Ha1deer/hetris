@@ -399,7 +399,12 @@ export default function NeonStack() {
     };
     resize();
     window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    const ro = wrapRef.current ? new ResizeObserver(resize) : null;
+    if (ro && wrapRef.current) ro.observe(wrapRef.current);
+    return () => {
+      window.removeEventListener("resize", resize);
+      ro?.disconnect();
+    };
   }, []);
 
   const colors = useMemo(() => {
