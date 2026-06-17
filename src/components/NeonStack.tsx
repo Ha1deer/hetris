@@ -747,14 +747,15 @@ function MiniPiece({ p, size }: { p: PieceKey; size: number }) {
 }
 
 function CtrlBtn({
-  onPress, onPressStart, onPressEnd, label, big, wide,
+  onPress, onPressStart, onPressEnd, label, big, wide, children,
 }: {
   onPress?: () => void;
   onPressStart?: () => void;
   onPressEnd?: () => void;
-  label: string;
+  label?: string;
   big?: boolean;
   wide?: boolean;
+  children?: React.ReactNode;
 }) {
   return (
     <button
@@ -766,10 +767,19 @@ function CtrlBtn({
       onPointerUp={() => onPressEnd?.()}
       onPointerLeave={() => onPressEnd?.()}
       onPointerCancel={() => onPressEnd?.()}
-      className={`select-none active:scale-95 active:bg-secondary/80 transition rounded-xl border border-border bg-card/80 text-foreground font-semibold ${big ? "h-14 text-lg" : "h-12 text-sm"} ${wide ? "w-full" : ""}`}
-      style={{ touchAction: "none", boxShadow: "inset 0 0 0 1px rgba(120,200,255,0.08), 0 0 12px rgba(120,200,255,0.05)" }}
+      className={`select-none flex flex-col items-center justify-center gap-0.5 active:scale-95 active:bg-primary/20 transition rounded-2xl border border-white/10 bg-white/[0.04] text-foreground backdrop-blur-md ${big ? "h-16" : "h-14"} ${wide ? "w-full flex-row gap-2" : ""}`}
+      style={{
+        touchAction: "none",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(120,200,255,0.06), 0 6px 20px -8px rgba(120,200,255,0.25)",
+      }}
     >
-      {label}
+      {children}
+      {label && (
+        <span className="text-[9px] tracking-[0.2em] text-foreground/70 font-semibold">
+          {label}
+        </span>
+      )}
     </button>
   );
 }
