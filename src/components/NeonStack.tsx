@@ -942,15 +942,11 @@ function Overlay({
 }) {
   return (
     <div
-      className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
+      className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center ${phase === "menu" ? "hetris-starfield" : ""}`}
       style={
         phase === "menu"
-          ? {
-              backgroundImage: `linear-gradient(180deg, rgba(8,6,22,0.55) 0%, rgba(8,6,22,0.85) 100%), url(${menuBg.url})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
-          : { backdropFilter: "blur(10px)", background: "rgba(8,6,22,0.78)" }
+          ? undefined
+          : { backdropFilter: "blur(10px)", background: "rgba(3,6,15,0.82)" }
       }
     >
       {phase === "menu" && (
