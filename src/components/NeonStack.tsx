@@ -1137,11 +1137,18 @@ function SettingsPanel({
   stats: Stats;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border border-border bg-card p-5 space_y-4 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-3xl border border-white/10 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,30,60,0.92), rgba(8,12,30,0.96))",
+          boxShadow: "0 20px 60px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
+        }}
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold tracking-wider">SETTINGS</h3>
-          <button onClick={onClose} className="text-muted-foreground">✕</button>
+          <h3 className="text-base font-black tracking-[0.35em]">SETTINGS</h3>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70 hover:text-foreground">✕</button>
         </div>
 
         <Row label="Ghost piece">
@@ -1158,6 +1165,16 @@ function SettingsPanel({
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
               <button key={m} onClick={() => setSettings({ ...settings, control: m })}
                 className={`px-2 py-1 text-xs rounded-md border ${settings.control === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                {m}
+              </button>
+            ))}
+          </div>
+        </Row>
+        <Row label="Handedness">
+          <div className="flex gap-1">
+            {(["right", "left"] as const).map((m) => (
+              <button key={m} onClick={() => setSettings({ ...settings, handed: m })}
+                className={`px-3 py-1 text-xs rounded-md border capitalize ${settings.handed === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {m}
               </button>
             ))}
