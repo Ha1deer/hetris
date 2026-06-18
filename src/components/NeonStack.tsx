@@ -603,8 +603,9 @@ export default function NeonStack() {
         }
       }
       const ms = gravityMs(levelFromLines(linesRef.current));
+      const canFall = !!tryMove(boardRef.current, p, 0, 1);
       const frac = Math.min(0.95, dropAccRef.current / ms);
-      const subY = frac * cell;
+      const subY = canFall ? frac * cell : 0;
       for (const [x, y] of pieceCells(p)) {
         if (y >= -1) drawCell(ctx, ox + x * cell, oy + y * cell + subY, cell, p.key);
       }
