@@ -1401,3 +1401,77 @@ const SwapIcon = ({ size }: { size?: number }) => (
     <path d="M17 17H6l3 3" />
   </Svg>
 );
+
+/* ---------- First-launch control picker ---------- */
+
+function ControlPicker({ onPick }: { onPick: (mode: ControlMode) => void }) {
+  const options: { mode: ControlMode; title: string; desc: string; icon: React.ReactNode }[] = [
+    {
+      mode: "swipe",
+      title: "SWIPE",
+      desc: "Swipe to move, tap to rotate, flick down to drop",
+      icon: <SoftDropIcon size={28} />,
+    },
+    {
+      mode: "buttons",
+      title: "BUTTONS",
+      desc: "Classic on-screen D-pad and action buttons",
+      icon: <RotateIcon size={28} />,
+    },
+    {
+      mode: "both",
+      title: "HYBRID",
+      desc: "Swipe gestures and on-screen buttons together",
+      icon: <DropIcon size={28} />,
+    },
+  ];
+  return (
+    <div className="fixed inset-0 z-[55] flex flex-col items-center justify-center px-6 hetris-starfield">
+      <div className="w-full max-w-sm text-center animate-in fade-in zoom-in-95 duration-500">
+        <p className="text-[10px] tracking-[0.5em] text-foreground/60 mb-2">
+          WELCOME TO
+        </p>
+        <h1
+          className="text-5xl font-black tracking-[0.3em] mb-6"
+          style={{
+            background: "linear-gradient(120deg, #ffd60a, #ffc300, #ffea00)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            filter: "drop-shadow(0 0 28px rgba(255,214,10,0.45))",
+          }}
+        >
+          HETRIS
+        </h1>
+        <p className="text-[11px] tracking-[0.3em] text-foreground/70 mb-6">
+          CHOOSE YOUR CONTROLS
+        </p>
+        <div className="flex flex-col gap-3">
+          {options.map((o) => (
+            <button
+              key={o.mode}
+              onClick={() => onPick(o.mode)}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md text-left active:scale-[0.98] transition"
+              style={{
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 30px -12px rgba(255,214,10,0.25)",
+              }}
+            >
+              <span
+                className="w-12 h-12 grid place-items-center rounded-xl shrink-0 text-primary-foreground"
+                style={{ background: "linear-gradient(140deg, var(--accent), var(--primary))" }}
+              >
+                {o.icon}
+              </span>
+              <span className="flex flex-col">
+                <span className="text-sm font-black tracking-[0.3em]">{o.title}</span>
+                <span className="text-[11px] text-foreground/60 mt-0.5">{o.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-foreground/40 mt-6 tracking-[0.2em]">
+          You can change this anytime in Settings.
+        </p>
+      </div>
+    </div>
+  );
+}
