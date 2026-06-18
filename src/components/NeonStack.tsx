@@ -945,7 +945,7 @@ function Overlay({
 }) {
   return (
     <div
-      className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center ${phase === "menu" ? "hetris-starfield" : ""}`}
+      className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center ${phase === "menu" ? "hetris-menu-bg" : ""}`}
       style={
         phase === "menu"
           ? undefined
