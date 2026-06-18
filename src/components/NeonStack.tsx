@@ -882,7 +882,7 @@ function MiniPiece({ p, size }: { p: PieceKey; size: number }) {
 }
 
 function CtrlBtn({
-  onPress, onPressStart, onPressEnd, label, big, wide, children,
+  onPress, onPressStart, onPressEnd, label, big, wide, accent, children,
 }: {
   onPress?: () => void;
   onPressStart?: () => void;
@@ -890,6 +890,7 @@ function CtrlBtn({
   label?: string;
   big?: boolean;
   wide?: boolean;
+  accent?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -902,11 +903,17 @@ function CtrlBtn({
       onPointerUp={() => onPressEnd?.()}
       onPointerLeave={() => onPressEnd?.()}
       onPointerCancel={() => onPressEnd?.()}
-      className={`select-none flex flex-col items-center justify-center gap-0.5 active:scale-95 active:bg-primary/20 transition rounded-xl border border-white/10 bg-white/[0.04] text-foreground backdrop-blur-md ${wide ? "h-10 w-full flex-row gap-2" : "h-12"}`}
+      className={`select-none flex flex-col items-center justify-center gap-0.5 active:scale-90 transition-transform rounded-2xl border border-white/10 backdrop-blur-md ${
+        accent ? "text-primary-foreground" : "text-foreground/90"
+      } ${wide ? "h-11 w-full flex-row gap-2" : big ? "h-20 w-20" : "h-14"}`}
       style={{
         touchAction: "none",
-        boxShadow:
-          "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(120,200,255,0.06), 0 6px 20px -8px rgba(120,200,255,0.25)",
+        background: accent
+          ? "linear-gradient(140deg, var(--accent), var(--primary))"
+          : "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+        boxShadow: accent
+          ? "0 10px 28px -8px var(--accent), inset 0 1px 0 rgba(255,255,255,0.45)"
+          : "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(255,214,10,0.06), 0 6px 18px -10px rgba(0,0,0,0.6)",
       }}
     >
       {children}
