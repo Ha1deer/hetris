@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import haiderIntro from "@/assets/haider-intro.png.asset.json";
 import soundtrack from "@/assets/soundtrack.mp3.asset.json";
-import menuBg from "@/assets/menu-bg.jpg.asset.json";
 import {
   Bag,
   Board,
@@ -25,7 +24,7 @@ import {
 } from "@/lib/tetris";
 
 type ControlMode = "buttons" | "swipe" | "both";
-type Phase = "intro" | "menu" | "playing" | "paused" | "over" | "about";
+type Phase = "intro" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
 
 interface Settings {
   ghost: boolean;
@@ -47,6 +46,7 @@ const HS_KEY = "neonstack:highscore";
 const STATS_KEY = "neonstack:stats";
 const SET_KEY = "neonstack:settings";
 const TIPS_KEY = "neonstack:tipsSeen";
+const CTRL_PICKED_KEY = "neonstack:ctrlPicked";
 
 interface Stats {
   bestScore: number;
@@ -118,7 +118,12 @@ export default function NeonStack() {
   // Auto-dismiss intro after 3.2s
   useEffect(() => {
     if (phase !== "intro") return;
-    const t = setTimeout(() => setPhase("menu"), 3200);
+    const t = setTimeout(() => {
+      // First-launch control picker
+      let picked = false;
+      try { picked = !!localStorage.getItem(CTRL_PICKED_KEY); } catch {}
+      setPhase(picked ? "menu" : "pickControls");
+    }, 3200);
     return () => clearTimeout(t);
   }, [phase]);
 
@@ -172,6 +177,9 @@ export default function NeonStack() {
   const phaseRef = useRef<Phase>("menu");
   const flashRef = useRef<{ rows: number[]; t: number } | null>(null);
   const settingsRef = useRef(settings);
+  const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number }[]>([]);
+  const popupRef = useRef<{ text: string; t: number } | null>(null);
+  const [, forcePopupRender] = useState(0);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -256,6 +264,18 @@ export default function NeonStack() {
       setLevel(lvl);
       setCombo(comboRef.current);
       flashRef.current = { rows, t: performance.now() };
+      // Burst particles per cleared row
+      spawnLineParticles(rows);
+      // Popup text for tetris / combos
+      const label =
+        cleared === 4 ? "TETRIS!" :
+        cleared === 3 ? "TRIPLE" :
+        cleared === 2 ? "DOUBLE" :
+        comboRef.current >= 1 ? `COMBO x${comboRef.current + 1}` : "";
+      if (label) {
+        popupRef.current = { text: label, t: performance.now() };
+        forcePopupRender((n) => n + 1);
+      }
       if (settingsRef.current.sound) beep(cleared >= 4 ? 880 : 660, 0.12, "triangle", 0.08);
     } else {
       comboRef.current = -1;
@@ -263,6 +283,37 @@ export default function NeonStack() {
     }
     spawnNext();
   }, [spawnNext]);
+
+  const spawnLineParticles = (rows: number[]) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const W = parseFloat(c.style.width);
+    const H = parseFloat(c.style.height);
+    const cell = Math.floor(Math.min(W / COLS, H / ROWS));
+    const boardW = cell * COLS;
+    const boardH = cell * ROWS;
+    const ox = Math.floor((W - boardW) / 2);
+    const oy = Math.floor((H - boardH) / 2);
+    const palette = ["#ffd60a", "#ffc300", "#fff3a0", "#ffffff", "#7ee0ff"];
+    for (const r of rows) {
+      for (let i = 0; i < 24; i++) {
+        const px = ox + Math.random() * boardW;
+        const py = oy + (r + 0.5) * cell;
+        const ang = Math.random() * Math.PI * 2;
+        const sp = 80 + Math.random() * 220;
+        particlesRef.current.push({
+          x: px, y: py,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp - 60,
+          life: 0, max: 600 + Math.random() * 400,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          size: 2 + Math.random() * 3,
+        });
+      }
+    }
+  };
+
+  const hardDropFlashRef = useRef<{ t: number; col: number; from: number; to: number; key: PieceKey } | null>(null);
 
   const move = useCallback((dx: number) => {
     if (phaseRef.current !== "playing" || !pieceRef.current) return;
@@ -296,6 +347,13 @@ export default function NeonStack() {
   const hardDrop = useCallback(() => {
     if (phaseRef.current !== "playing" || !pieceRef.current) return;
     const d = hardDropDistance(boardRef.current, pieceRef.current);
+    hardDropFlashRef.current = {
+      t: performance.now(),
+      col: pieceRef.current.x,
+      from: pieceRef.current.y,
+      to: pieceRef.current.y + d,
+      key: pieceRef.current.key,
+    };
     pieceRef.current = { ...pieceRef.current, y: pieceRef.current.y + d };
     setScore((s) => s + d * 2);
     if (settingsRef.current.sound) beep(220, 0.06, "sawtooth", 0.06);
@@ -374,6 +432,17 @@ export default function NeonStack() {
           }
         }
         setElapsed(Math.floor((ts - startTsRef.current) / 1000));
+      }
+      // Update particles
+      if (particlesRef.current.length) {
+        const sec = dt / 1000;
+        for (const p of particlesRef.current) {
+          p.life += dt;
+          p.x += p.vx * sec;
+          p.y += p.vy * sec;
+          p.vy += 600 * sec;
+        }
+        particlesRef.current = particlesRef.current.filter((p) => p.life < p.max);
       }
       draw();
     };
@@ -506,7 +575,23 @@ export default function NeonStack() {
       }
     }
 
-    // ghost + piece
+    // hard-drop streak trail
+    if (hardDropFlashRef.current) {
+      const age = performance.now() - hardDropFlashRef.current.t;
+      if (age < 260) {
+        const a = 1 - age / 260;
+        const { col, from, to } = hardDropFlashRef.current;
+        const grad2 = ctx.createLinearGradient(0, oy + from * cell, 0, oy + (to + 1) * cell);
+        grad2.addColorStop(0, `rgba(255,214,10,0)`);
+        grad2.addColorStop(1, `rgba(255,214,10,${0.55 * a})`);
+        ctx.fillStyle = grad2;
+        ctx.fillRect(ox + col * cell, oy + from * cell, cell * 4, (to - from + 1) * cell);
+      } else {
+        hardDropFlashRef.current = null;
+      }
+    }
+
+    // ghost + piece (with smooth sub-cell fall offset)
     const p = pieceRef.current;
     if (p && phaseRef.current === "playing") {
       if (settingsRef.current.ghost) {
@@ -515,9 +600,26 @@ export default function NeonStack() {
           if (y >= 0) drawCell(ctx, ox + x * cell, oy + y * cell, cell, p.key, { ghost: true });
         }
       }
+      const ms = gravityMs(levelFromLines(linesRef.current));
+      const frac = Math.min(0.95, dropAccRef.current / ms);
+      const subY = frac * cell;
       for (const [x, y] of pieceCells(p)) {
-        if (y >= 0) drawCell(ctx, ox + x * cell, oy + y * cell, cell, p.key);
+        if (y >= -1) drawCell(ctx, ox + x * cell, oy + y * cell + subY, cell, p.key);
       }
+    }
+
+    // Particles
+    if (particlesRef.current.length) {
+      for (const part of particlesRef.current) {
+        const a = 1 - part.life / part.max;
+        ctx.globalAlpha = Math.max(0, a);
+        ctx.fillStyle = part.color;
+        ctx.shadowColor = part.color;
+        ctx.shadowBlur = 10;
+        ctx.fillRect(part.x, part.y, part.size, part.size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
     }
   };
 
@@ -597,7 +699,11 @@ export default function NeonStack() {
       {/* Intro splash — Developed by Haider */}
       {phase === "intro" && (
         <div
-          onClick={() => setPhase("menu")}
+          onClick={() => {
+            let picked = false;
+            try { picked = !!localStorage.getItem(CTRL_PICKED_KEY); } catch {}
+            setPhase(picked ? "menu" : "pickControls");
+          }}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black cursor-pointer animate-in fade-in"
         >
           <img
@@ -609,8 +715,19 @@ export default function NeonStack() {
         </div>
       )}
 
+      {/* First-launch control picker */}
+      {phase === "pickControls" && (
+        <ControlPicker
+          onPick={(mode) => {
+            setSettings({ ...settings, control: mode });
+            try { localStorage.setItem(CTRL_PICKED_KEY, "1"); } catch {}
+            setPhase("menu");
+          }}
+        />
+      )}
+
       {/* Top HUD — only visible during active gameplay states */}
-      {phase !== "menu" && phase !== "intro" && (
+      {phase !== "menu" && phase !== "intro" && phase !== "pickControls" && (
         <div className="relative z-10 flex items-center justify-between px-3 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 text-xs">
           <div className="flex gap-3">
             <Stat label="SCORE" value={score.toString()} />
@@ -632,24 +749,34 @@ export default function NeonStack() {
       <div ref={wrapRef} className="relative flex-1 min-h-0 overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0" />
 
-        {/* Floating Hold + Next overlay (only during play / pause) */}
-        {phase !== "menu" && phase !== "intro" && phase !== "over" && (
-          <>
-            <div className="absolute top-2 left-2 z-10 pointer-events-none">
-              <FloatingBox label="HOLD" piece={holdRef.current} />
+        {/* Floating Next overlay (only during play / pause) */}
+        {phase !== "menu" && phase !== "intro" && phase !== "pickControls" && phase !== "over" && (
+          <div className="absolute top-2 right-2 z-10 pointer-events-none flex flex-col items-end gap-1">
+            <span className="text-[9px] tracking-[0.25em] text-foreground/60">NEXT</span>
+            <div className="flex flex-col gap-1">
+              {nextRef.current.slice(0, 4).map((p, i) => (
+                <FloatingBox key={i} piece={p} small />
+              ))}
             </div>
-            <div className="absolute top-2 right-2 z-10 pointer-events-none flex flex-col items-end gap-1">
-              <span className="text-[9px] tracking-[0.25em] text-foreground/60">NEXT</span>
-              <div className="flex flex-col gap-1">
-                {nextRef.current.slice(0, 4).map((p, i) => (
-                  <FloatingBox key={i} piece={p} small />
-                ))}
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
-        {phase !== "playing" && (
+        {/* Line clear popup */}
+        {popupRef.current && performance.now() - popupRef.current.t < 900 && phase === "playing" && (
+          <div
+            className="absolute left-1/2 top-1/2 z-20 pointer-events-none text-3xl font-black tracking-[0.3em]"
+            style={{
+              transform: "translate(-50%, -50%)",
+              color: "var(--accent)",
+              textShadow: "0 0 24px var(--accent), 0 0 8px #fff",
+              animation: "hetris-popup 900ms ease-out forwards",
+            }}
+          >
+            {popupRef.current.text}
+          </div>
+        )}
+
+        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && (
           <Overlay
             phase={phase}
             stats={stats}
@@ -671,25 +798,30 @@ export default function NeonStack() {
       </div>
 
       {/* Control buttons — hidden in menu */}
-      {phase !== "menu" && phase !== "intro" &&
+      {phase !== "menu" && phase !== "intro" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
-        <div className="relative z-10 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shrink-0">
-          <div className="grid grid-cols-5 gap-1.5">
-            <CtrlBtn onPress={hold} label="HOLD"><SwapIcon /></CtrlBtn>
-            <CtrlBtn onPress={() => move(-1)}><ChevronIcon dir="left" /></CtrlBtn>
-            <CtrlBtn onPress={() => rotate(1)}><RotateIcon /></CtrlBtn>
-            <CtrlBtn onPress={() => move(1)}><ChevronIcon dir="right" /></CtrlBtn>
-            <CtrlBtn onPress={hardDrop} label="DROP"><DropIcon /></CtrlBtn>
-          </div>
-          <div className="mt-1.5">
-            <CtrlBtn
-              onPressStart={() => { softDropRef.current = true; }}
-              onPressEnd={() => { softDropRef.current = false; }}
-              label="SOFT DROP"
-              wide
-            >
-              <SoftDropIcon />
-            </CtrlBtn>
+        <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
+          <div className="grid grid-cols-2 gap-3 items-center">
+            {/* D-pad cluster */}
+            <div className="grid grid-cols-3 grid-rows-2 gap-1.5">
+              <div />
+              <CtrlBtn
+                onPressStart={() => { softDropRef.current = true; }}
+                onPressEnd={() => { softDropRef.current = false; }}
+              >
+                <SoftDropIcon size={22} />
+              </CtrlBtn>
+              <div />
+              <CtrlBtn onPress={() => move(-1)}><ChevronIcon dir="left" /></CtrlBtn>
+              <CtrlBtn onPress={hardDrop} accent><DropIcon /></CtrlBtn>
+              <CtrlBtn onPress={() => move(1)}><ChevronIcon dir="right" /></CtrlBtn>
+            </div>
+            {/* Action cluster */}
+            <div className="flex items-center justify-end pr-1">
+              <CtrlBtn onPress={() => rotate(1)} big accent>
+                <RotateIcon size={30} />
+              </CtrlBtn>
+            </div>
           </div>
         </div>
       )}
