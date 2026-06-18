@@ -804,9 +804,9 @@ export default function NeonStack() {
       {phase !== "menu" && phase !== "intro" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
         <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
-          <div className="grid grid-cols-2 gap-3 items-center">
-            {/* D-pad cluster */}
-            <div className="grid grid-cols-3 grid-rows-2 gap-1.5">
+          <div className={`grid grid-cols-2 gap-3 items-center ${settings.handed === "left" ? "[direction:rtl]" : ""}`}>
+            {/* D-pad cluster — movement + rotate */}
+            <div className="grid grid-cols-3 grid-rows-2 gap-1.5 [direction:ltr]">
               <div />
               <CtrlBtn
                 onPressStart={() => { softDropRef.current = true; }}
@@ -816,13 +816,13 @@ export default function NeonStack() {
               </CtrlBtn>
               <div />
               <CtrlBtn onPress={() => move(-1)}><ChevronIcon dir="left" /></CtrlBtn>
-              <CtrlBtn onPress={hardDrop} accent><DropIcon /></CtrlBtn>
+              <CtrlBtn onPress={() => rotate(1)} accent><RotateIcon size={22} /></CtrlBtn>
               <CtrlBtn onPress={() => move(1)}><ChevronIcon dir="right" /></CtrlBtn>
             </div>
-            {/* Action cluster */}
-            <div className="flex items-center justify-end pr-1">
-              <CtrlBtn onPress={() => rotate(1)} big accent>
-                <RotateIcon size={30} />
+            {/* Action cluster — hard drop (primary action) */}
+            <div className={`flex items-center [direction:ltr] ${settings.handed === "left" ? "justify-start pl-1" : "justify-end pr-1"}`}>
+              <CtrlBtn onPress={hardDrop} big accent>
+                <DropIcon size={32} />
               </CtrlBtn>
             </div>
           </div>
