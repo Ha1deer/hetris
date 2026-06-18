@@ -1018,28 +1018,67 @@ function Overlay({
       )}
 
       {phase === "paused" && (
-        <div className="flex flex-col items-center animate-in fade-in zoom-in-95">
-          <PauseIcon size={48} />
-          <h2 className="mt-3 text-3xl font-black tracking-[0.3em]">PAUSED</h2>
-          <div className="mt-8 flex flex-col gap-2 w-56">
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 w-full max-w-xs">
+          <div
+            className="w-20 h-20 rounded-3xl grid place-items-center mb-4 border border-white/10"
+            style={{
+              background: "linear-gradient(140deg, var(--accent), var(--primary))",
+              boxShadow: "0 12px 40px -8px var(--accent), inset 0 1px 0 rgba(255,255,255,0.45)",
+              color: "var(--primary-foreground)",
+            }}
+          >
+            <PauseIcon size={36} />
+          </div>
+          <p className="text-[10px] tracking-[0.5em] text-foreground/50">GAME</p>
+          <h2
+            className="text-4xl font-black tracking-[0.35em]"
+            style={{
+              background: "linear-gradient(120deg, var(--piece-i), var(--accent), var(--piece-i))",
+              backgroundSize: "200% 100%",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              animation: "hetris-shine 4s linear infinite",
+            }}
+          >
+            PAUSED
+          </h2>
+
+          <div className="mt-6 mb-6 grid grid-cols-3 gap-2 w-full">
+            <Result label="SCORE" value={score} />
+            <Result label="LINES" value={lines} />
+            <Result label="LVL" value={Math.max(1, Math.floor(lines / 10) + 1)} />
+          </div>
+
+          <div className="flex flex-col gap-2 w-full">
             <button
               onClick={onResume}
-              className="py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-[0.25em] flex items-center justify-center gap-2 active:scale-95 transition"
-              style={{ boxShadow: "0 8px 30px -8px var(--piece-i)" }}
+              className="py-3.5 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{
+                background: "linear-gradient(120deg, var(--piece-i), var(--accent))",
+                boxShadow: "0 10px 30px -8px var(--piece-i), inset 0 1px 0 rgba(255,255,255,0.4)",
+              }}
             >
               <PlayIcon /> RESUME
             </button>
-            <button
-              onClick={onStart}
-              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground text-xs tracking-[0.3em] active:scale-95 transition"
-            >
-              RESTART
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onStart}
+                className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/85 text-[11px] tracking-[0.3em] flex items-center justify-center gap-1.5 backdrop-blur-md active:scale-95 transition"
+              >
+                <RotateIcon size={14} /> RESTART
+              </button>
+              <button
+                onClick={onSettings}
+                className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/85 text-[11px] tracking-[0.3em] flex items-center justify-center gap-1.5 backdrop-blur-md active:scale-95 transition"
+              >
+                <GearIcon /> SETTINGS
+              </button>
+            </div>
             <button
               onClick={onHome}
-              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.3em] flex items-center justify-center gap-2 active:scale-95 transition"
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/70 text-[11px] tracking-[0.3em] flex items-center justify-center gap-2 backdrop-blur-md active:scale-95 transition"
             >
-              <HomeIcon /> MAIN MENU
+              <HomeIcon size={14} /> MAIN MENU
             </button>
           </div>
         </div>
