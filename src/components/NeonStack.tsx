@@ -32,6 +32,7 @@ interface Settings {
   music: boolean;
   control: ControlMode;
   swipeSensitivity: number; // px per cell
+  handed: "right" | "left";
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +41,7 @@ const DEFAULT_SETTINGS: Settings = {
   music: true,
   control: "both",
   swipeSensitivity: 24,
+  handed: "right",
 };
 
 const HS_KEY = "neonstack:highscore";
@@ -601,8 +603,9 @@ export default function NeonStack() {
         }
       }
       const ms = gravityMs(levelFromLines(linesRef.current));
+      const canFall = !!tryMove(boardRef.current, p, 0, 1);
       const frac = Math.min(0.95, dropAccRef.current / ms);
-      const subY = frac * cell;
+      const subY = canFall ? frac * cell : 0;
       for (const [x, y] of pieceCells(p)) {
         if (y >= -1) drawCell(ctx, ox + x * cell, oy + y * cell + subY, cell, p.key);
       }
@@ -801,9 +804,9 @@ export default function NeonStack() {
       {phase !== "menu" && phase !== "intro" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
         <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
-          <div className="grid grid-cols-2 gap-3 items-center">
-            {/* D-pad cluster */}
-            <div className="grid grid-cols-3 grid-rows-2 gap-1.5">
+          <div className={`grid grid-cols-2 gap-3 items-center ${settings.handed === "left" ? "[direction:rtl]" : ""}`}>
+            {/* D-pad cluster — movement + rotate */}
+            <div className="grid grid-cols-3 grid-rows-2 gap-1.5 [direction:ltr]">
               <div />
               <CtrlBtn
                 onPressStart={() => { softDropRef.current = true; }}
@@ -813,13 +816,13 @@ export default function NeonStack() {
               </CtrlBtn>
               <div />
               <CtrlBtn onPress={() => move(-1)}><ChevronIcon dir="left" /></CtrlBtn>
-              <CtrlBtn onPress={hardDrop} accent><DropIcon /></CtrlBtn>
+              <CtrlBtn onPress={() => rotate(1)} accent><RotateIcon size={22} /></CtrlBtn>
               <CtrlBtn onPress={() => move(1)}><ChevronIcon dir="right" /></CtrlBtn>
             </div>
-            {/* Action cluster */}
-            <div className="flex items-center justify-end pr-1">
-              <CtrlBtn onPress={() => rotate(1)} big accent>
-                <RotateIcon size={30} />
+            {/* Action cluster — hard drop (primary action) */}
+            <div className={`flex items-center [direction:ltr] ${settings.handed === "left" ? "justify-start pl-1" : "justify-end pr-1"}`}>
+              <CtrlBtn onPress={hardDrop} big accent>
+                <DropIcon size={32} />
               </CtrlBtn>
             </div>
           </div>
@@ -942,7 +945,7 @@ function Overlay({
 }) {
   return (
     <div
-      className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center ${phase === "menu" ? "hetris-starfield" : ""}`}
+      className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center ${phase === "menu" ? "hetris-menu-bg" : ""}`}
       style={
         phase === "menu"
           ? undefined
@@ -1015,28 +1018,67 @@ function Overlay({
       )}
 
       {phase === "paused" && (
-        <div className="flex flex-col items-center animate-in fade-in zoom-in-95">
-          <PauseIcon size={48} />
-          <h2 className="mt-3 text-3xl font-black tracking-[0.3em]">PAUSED</h2>
-          <div className="mt-8 flex flex-col gap-2 w-56">
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-500 w-full max-w-xs">
+          <div
+            className="w-20 h-20 rounded-3xl grid place-items-center mb-4 border border-white/10"
+            style={{
+              background: "linear-gradient(140deg, var(--accent), var(--primary))",
+              boxShadow: "0 12px 40px -8px var(--accent), inset 0 1px 0 rgba(255,255,255,0.45)",
+              color: "var(--primary-foreground)",
+            }}
+          >
+            <PauseIcon size={36} />
+          </div>
+          <p className="text-[10px] tracking-[0.5em] text-foreground/50">GAME</p>
+          <h2
+            className="text-4xl font-black tracking-[0.35em]"
+            style={{
+              background: "linear-gradient(120deg, var(--piece-i), var(--accent), var(--piece-i))",
+              backgroundSize: "200% 100%",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              animation: "hetris-shine 4s linear infinite",
+            }}
+          >
+            PAUSED
+          </h2>
+
+          <div className="mt-6 mb-6 grid grid-cols-3 gap-2 w-full">
+            <Result label="SCORE" value={score} />
+            <Result label="LINES" value={lines} />
+            <Result label="LVL" value={Math.max(1, Math.floor(lines / 10) + 1)} />
+          </div>
+
+          <div className="flex flex-col gap-2 w-full">
             <button
               onClick={onResume}
-              className="py-3 rounded-xl bg-primary text-primary-foreground font-bold tracking-[0.25em] flex items-center justify-center gap-2 active:scale-95 transition"
-              style={{ boxShadow: "0 8px 30px -8px var(--piece-i)" }}
+              className="py-3.5 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{
+                background: "linear-gradient(120deg, var(--piece-i), var(--accent))",
+                boxShadow: "0 10px 30px -8px var(--piece-i), inset 0 1px 0 rgba(255,255,255,0.4)",
+              }}
             >
               <PlayIcon /> RESUME
             </button>
-            <button
-              onClick={onStart}
-              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground text-xs tracking-[0.3em] active:scale-95 transition"
-            >
-              RESTART
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onStart}
+                className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/85 text-[11px] tracking-[0.3em] flex items-center justify-center gap-1.5 backdrop-blur-md active:scale-95 transition"
+              >
+                <RotateIcon size={14} /> RESTART
+              </button>
+              <button
+                onClick={onSettings}
+                className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/85 text-[11px] tracking-[0.3em] flex items-center justify-center gap-1.5 backdrop-blur-md active:scale-95 transition"
+              >
+                <GearIcon /> SETTINGS
+              </button>
+            </div>
             <button
               onClick={onHome}
-              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.3em] flex items-center justify-center gap-2 active:scale-95 transition"
+              className="py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/70 text-[11px] tracking-[0.3em] flex items-center justify-center gap-2 backdrop-blur-md active:scale-95 transition"
             >
-              <HomeIcon /> MAIN MENU
+              <HomeIcon size={14} /> MAIN MENU
             </button>
           </div>
         </div>
@@ -1095,11 +1137,18 @@ function SettingsPanel({
   stats: Stats;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border border-border bg-card p-5 space_y-4 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-3xl border border-white/10 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,30,60,0.92), rgba(8,12,30,0.96))",
+          boxShadow: "0 20px 60px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
+        }}
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold tracking-wider">SETTINGS</h3>
-          <button onClick={onClose} className="text-muted-foreground">✕</button>
+          <h3 className="text-base font-black tracking-[0.35em]">SETTINGS</h3>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70 hover:text-foreground">✕</button>
         </div>
 
         <Row label="Ghost piece">
@@ -1116,6 +1165,16 @@ function SettingsPanel({
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
               <button key={m} onClick={() => setSettings({ ...settings, control: m })}
                 className={`px-2 py-1 text-xs rounded-md border ${settings.control === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                {m}
+              </button>
+            ))}
+          </div>
+        </Row>
+        <Row label="Handedness">
+          <div className="flex gap-1">
+            {(["right", "left"] as const).map((m) => (
+              <button key={m} onClick={() => setSettings({ ...settings, handed: m })}
+                className={`px-3 py-1 text-xs rounded-md border capitalize ${settings.handed === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {m}
               </button>
             ))}
