@@ -32,6 +32,7 @@ interface Settings {
   music: boolean;
   control: ControlMode;
   swipeSensitivity: number; // px per cell
+  handed: "right" | "left";
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +41,7 @@ const DEFAULT_SETTINGS: Settings = {
   music: true,
   control: "both",
   swipeSensitivity: 24,
+  handed: "right",
 };
 
 const HS_KEY = "neonstack:highscore";
