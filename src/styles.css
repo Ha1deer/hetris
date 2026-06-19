@@ -188,15 +188,6 @@
   100% { transform: translate(-50%, -120%) scale(1); opacity: 0; }
 }
 
-@keyframes hetris-drift {
-  0%   { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%; }
-  100% { background-position: 200px 120px, -180px 80px, 100px -150px, -60px 200px, 0% 0%; }
-}
-
-@keyframes hetris-aurora {
-  0%, 100% { transform: translate3d(-10%, -5%, 0) rotate(0deg); opacity: 0.55; }
-  50%      { transform: translate3d(10%, 5%, 0) rotate(8deg);  opacity: 0.85; }
-}
 
 .hetris-starfield {
   background:
