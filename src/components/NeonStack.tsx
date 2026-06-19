@@ -962,7 +962,7 @@ function Overlay({
 }) {
   return (
     <div
-      className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center ${phase === "menu" ? "hetris-menu-bg" : ""}`}
+      className={`${phase === "menu" ? "fixed z-40" : "absolute"} inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto ${phase === "menu" ? "hetris-menu-bg" : ""}`}
       style={
         phase === "menu"
           ? undefined
@@ -970,18 +970,18 @@ function Overlay({
       }
     >
       {phase === "menu" && (
-        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs">
+        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
           <div className="mb-10 text-center">
             <h1
-              className="text-6xl font-black tracking-[0.25em] leading-none"
+              className="text-6xl font-black tracking-[0.2em] leading-none"
               style={{
                 background:
-                  "linear-gradient(120deg, var(--piece-i), var(--accent), var(--piece-i))",
+                  "linear-gradient(120deg, #ffd76a, #ffb43a, #ffe9a8, #ffb43a)",
                 backgroundSize: "200% 100%",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 animation: "hetris-shine 4s linear infinite",
-                filter: "drop-shadow(0 0 24px rgba(120,200,255,0.45))",
+                filter: "drop-shadow(0 0 24px rgba(255,180,60,0.45))",
               }}
             >
               HETRIS
@@ -996,9 +996,9 @@ function Overlay({
             className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden"
             style={{
               background:
-                "linear-gradient(120deg, var(--piece-i), var(--accent))",
+                "linear-gradient(120deg, #ffb43a, #ffd76a)",
               boxShadow:
-                "0 10px 40px -10px var(--piece-i), inset 0 1px 0 rgba(255,255,255,0.4)",
+                "0 10px 40px -10px rgba(255,180,60,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
             }}
           >
             <span className="relative z-10 flex items-center justify-center gap-3">
