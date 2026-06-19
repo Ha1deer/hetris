@@ -213,7 +213,6 @@
 
 /* New main-menu cosmic backdrop: layered nebula + drifting stars + aurora sweep */
 .hetris-menu-bg {
-  position: relative;
   background:
     radial-gradient(1.5px 1.5px at 14% 22%, rgba(255,235,180,0.95), transparent 60%),
     radial-gradient(1px 1px at 72% 12%, rgba(200,225,255,0.9), transparent 60%),
