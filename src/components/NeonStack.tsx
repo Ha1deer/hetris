@@ -779,7 +779,7 @@ export default function NeonStack() {
           </div>
         )}
 
-        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && (
+        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "menu" && (
           <Overlay
             phase={phase}
             stats={stats}
@@ -799,6 +799,23 @@ export default function NeonStack() {
           <TipsOverlay onClose={() => setShowTips(false)} />
         )}
       </div>
+
+      {/* Main menu — rendered as a fixed full-screen layer so it always covers
+          the board canvas behind it regardless of flex sizing quirks. */}
+      {phase === "menu" && (
+        <Overlay
+          phase={phase}
+          stats={stats}
+          score={score}
+          lines={lines}
+          time={elapsed}
+          onStart={startGame}
+          onResume={() => setPhase("playing")}
+          onAbout={() => setShowAbout(true)}
+          onSettings={() => setShowSettings(true)}
+          onHome={() => setPhase("menu")}
+        />
+      )}
 
       {/* Control buttons — hidden in menu */}
       {phase !== "menu" && phase !== "intro" && phase !== "pickControls" &&
