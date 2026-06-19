@@ -211,7 +211,7 @@
     linear-gradient(180deg, #03060f 0%, #050a1c 60%, #08122b 100%);
 }
 
-/* New main-menu cosmic backdrop: layered nebula + drifting stars + aurora sweep */
+/* Main-menu cosmic backdrop: static layered nebula + stars */
 .hetris-menu-bg {
   background:
     radial-gradient(1.5px 1.5px at 14% 22%, rgba(255,235,180,0.95), transparent 60%),
@@ -224,20 +224,7 @@
     radial-gradient(ellipse 90% 60% at 50% 50%, rgba(20,40,90,0.55), transparent 80%),
     linear-gradient(170deg, #02040c 0%, #060a1f 45%, #0a0820 80%, #120630 100%);
   background-size: 220px 220px, 260px 260px, 200px 200px, 240px 240px, 280px 280px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
-  animation: hetris-drift 60s linear infinite;
   overflow: hidden;
-}
-.hetris-menu-bg::before {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background:
-    radial-gradient(ellipse 50% 30% at 30% 40%, rgba(255,200,80,0.18), transparent 70%),
-    radial-gradient(ellipse 40% 25% at 70% 60%, rgba(120,90,255,0.22), transparent 70%),
-    radial-gradient(ellipse 60% 35% at 50% 80%, rgba(60,180,255,0.14), transparent 70%);
-  filter: blur(40px);
-  animation: hetris-aurora 18s ease-in-out infinite;
-  pointer-events: none;
 }
 .hetris-menu-bg::after {
   content: "";
