@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "build:mobile": "vite build --config vite.mobile.config.ts",
+    "fetch:mobile-assets": "node scripts/fetch-mobile-assets.mjs",
+    "build:mobile": "node scripts/fetch-mobile-assets.mjs && vite build --config vite.mobile.config.ts",
     "cap:add:android": "bun run build:mobile && cap add android",
     "cap:sync": "bun run build:mobile && cap sync android",
     "cap:open:android": "cap open android"
