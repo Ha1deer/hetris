@@ -9,9 +9,17 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:mobile": "vite build --config vite.mobile.config.ts",
+    "cap:add:android": "bun run build:mobile && cap add android",
+    "cap:sync": "bun run build:mobile && cap sync android",
+    "cap:open:android": "cap open android"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -66,8 +74,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "^2.3.2",
+    "@lovable.dev/vite-tanstack-config": "2.5.3",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
