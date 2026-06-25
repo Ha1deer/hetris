@@ -117,7 +117,7 @@ export default function NeonStack() {
   const [showTips, setShowTips] = useState(false);
   const musicRef = useRef<HTMLAudioElement | null>(null);
 
-  // Auto-dismiss intro after 3.2s
+  // Auto-dismiss intro after 2s (no tap-to-skip)
   useEffect(() => {
     if (phase !== "intro") return;
     const t = setTimeout(() => {
@@ -125,7 +125,7 @@ export default function NeonStack() {
       let picked = false;
       try { picked = !!localStorage.getItem(CTRL_PICKED_KEY); } catch {}
       setPhase(picked ? "menu" : "pickControls");
-    }, 3200);
+    }, 2000);
     return () => clearTimeout(t);
   }, [phase]);
 
@@ -702,12 +702,7 @@ export default function NeonStack() {
       {/* Intro splash — Developed by Haider */}
       {phase === "intro" && (
         <div
-          onClick={() => {
-            let picked = false;
-            try { picked = !!localStorage.getItem(CTRL_PICKED_KEY); } catch {}
-            setPhase(picked ? "menu" : "pickControls");
-          }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black cursor-pointer animate-in fade-in"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black animate-in fade-in select-none"
         >
           <img
             src={haiderIntro.url}
