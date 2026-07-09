@@ -1337,6 +1337,16 @@ function SettingsPanel({
         <Row label="Music">
           <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
         </Row>
+        <Row label="Difficulty">
+          <div className="flex gap-1">
+            {(["easy", "normal", "hard"] as const).map((d) => (
+              <button key={d} onClick={() => setSettings({ ...settings, difficulty: d })}
+                className={`px-2 py-1 text-xs rounded-md border capitalize ${settings.difficulty === d ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                {d}
+              </button>
+            ))}
+          </div>
+        </Row>
         <Row label="Controls">
           <div className="flex gap-1">
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
