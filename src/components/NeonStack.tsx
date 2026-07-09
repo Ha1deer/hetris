@@ -363,6 +363,7 @@ export default function NeonStack() {
     const np = tryMove(boardRef.current, pieceRef.current, dx, 0);
     if (np) {
       pieceRef.current = np;
+      lastActionRef.current = "move";
       if (settingsRef.current.sound) beep(400, 0.02, "square", 0.03);
     }
   }, []);
@@ -372,6 +373,7 @@ export default function NeonStack() {
     const np = tryRotate(boardRef.current, pieceRef.current, dir);
     if (np) {
       pieceRef.current = np;
+      lastActionRef.current = "rotate";
       if (settingsRef.current.sound) beep(520, 0.025, "square", 0.04);
     }
   }, []);
@@ -381,6 +383,7 @@ export default function NeonStack() {
     const np = tryMove(boardRef.current, pieceRef.current, 0, 1);
     if (np) {
       pieceRef.current = np;
+      lastActionRef.current = "move";
       setScore((s) => s + 1);
     } else {
       lockPiece();
@@ -398,6 +401,11 @@ export default function NeonStack() {
       key: pieceRef.current.key,
     };
     pieceRef.current = { ...pieceRef.current, y: pieceRef.current.y + d };
+    lastActionRef.current = "drop";
+    // Impact FX: screen shake + landing flash + dust particles
+    shakeRef.current = Math.min(14, 6 + d);
+    impactFlashRef.current = { t: performance.now(), y: pieceRef.current.y };
+    spawnImpactParticles(pieceRef.current);
     setScore((s) => s + d * 2);
     if (settingsRef.current.sound) beep(220, 0.06, "sawtooth", 0.06);
     lockPiece();
