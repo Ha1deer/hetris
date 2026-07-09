@@ -217,6 +217,11 @@ export default function NeonStack() {
     comboRef.current = -1;
     startTsRef.current = performance.now();
     flashRef.current = null;
+    prevLevelRef.current = 1;
+    lastActionRef.current = null;
+    shakeRef.current = 0;
+    impactFlashRef.current = null;
+    particlesRef.current = [];
     setScore(0); setLines(0); setLevel(1); setCombo(0); setElapsed(0);
     spawnNext();
     setPhase("playing");
