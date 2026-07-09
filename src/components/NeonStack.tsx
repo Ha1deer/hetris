@@ -189,6 +189,10 @@ export default function NeonStack() {
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number }[]>([]);
   const popupRef = useRef<{ text: string; t: number } | null>(null);
   const [, forcePopupRender] = useState(0);
+  const lastActionRef = useRef<"rotate" | "move" | "drop" | null>(null);
+  const prevLevelRef = useRef(1);
+  const shakeRef = useRef(0);
+  const impactFlashRef = useRef<{ t: number; y: number } | null>(null);
 
   useEffect(() => {
     settingsRef.current = settings;
