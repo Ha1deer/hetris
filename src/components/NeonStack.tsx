@@ -33,6 +33,7 @@ interface Settings {
   control: ControlMode;
   swipeSensitivity: number; // px per cell
   handed: "right" | "left";
+  difficulty: "easy" | "normal" | "hard";
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: Settings = {
   control: "both",
   swipeSensitivity: 24,
   handed: "right",
+  difficulty: "normal",
 };
 
 const HS_KEY = "neonstack:highscore";
@@ -55,15 +57,20 @@ interface Stats {
   bestLines: number;
   bestTimeSec: number;
   gamesPlayed: number;
+  topScores?: number[];
 }
 
 function loadStats(): Stats {
   if (typeof window === "undefined") return { bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 };
   try {
     const raw = localStorage.getItem(STATS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (!Array.isArray(s.topScores)) s.topScores = [];
+      return s;
+    }
   } catch {}
-  return { bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 };
+  return { bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0, topScores: [] };
 }
 function loadSettings(): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
@@ -182,6 +189,10 @@ export default function NeonStack() {
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; max: number; color: string; size: number }[]>([]);
   const popupRef = useRef<{ text: string; t: number } | null>(null);
   const [, forcePopupRender] = useState(0);
+  const lastActionRef = useRef<"rotate" | "move" | "drop" | null>(null);
+  const prevLevelRef = useRef(1);
+  const shakeRef = useRef(0);
+  const impactFlashRef = useRef<{ t: number; y: number } | null>(null);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -206,6 +217,11 @@ export default function NeonStack() {
     comboRef.current = -1;
     startTsRef.current = performance.now();
     flashRef.current = null;
+    prevLevelRef.current = 1;
+    lastActionRef.current = null;
+    shakeRef.current = 0;
+    impactFlashRef.current = null;
+    particlesRef.current = [];
     setScore(0); setLines(0); setLevel(1); setCombo(0); setElapsed(0);
     spawnNext();
     setPhase("playing");
@@ -233,6 +249,9 @@ export default function NeonStack() {
           bestLines: Math.max(s.bestLines, finalLines),
           bestTimeSec: Math.max(s.bestTimeSec, finalTime),
           gamesPlayed: s.gamesPlayed + 1,
+          topScores: [...(s.topScores ?? []), finalScore]
+            .sort((a, b) => b - a)
+            .slice(0, 5),
         };
         try { localStorage.setItem(STATS_KEY, JSON.stringify(next)); } catch {}
         try { localStorage.setItem(HS_KEY, String(next.bestScore)); } catch {}
@@ -254,15 +273,35 @@ export default function NeonStack() {
   const lockPiece = useCallback(() => {
     const p = pieceRef.current;
     if (!p) return;
+    // T-spin detection: last action was rotate on a T, and >=3 corners of its
+    // 3x3 bounding box center are blocked.
+    let tSpin = false;
+    if (p.key === "T" && lastActionRef.current === "rotate") {
+      const cx = p.x + 1, cy = p.y + 1;
+      let corners = 0;
+      for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const xx = cx + dx, yy = cy + dy;
+        if (xx < 0 || xx >= COLS || yy >= ROWS || (yy >= 0 && boardRef.current[yy][xx])) corners++;
+      }
+      if (corners >= 3) tSpin = true;
+    }
     boardRef.current = merge(boardRef.current, p);
     const { board: nb, cleared, rows } = clearLines(boardRef.current);
     boardRef.current = nb;
     if (cleared > 0) {
       comboRef.current += 1;
       const lvl = levelFromLines(linesRef.current + cleared);
-      const gained = lineScore(cleared, lvl, comboRef.current + 1);
+      let gained = lineScore(cleared, lvl, comboRef.current + 1);
+      if (tSpin) gained += (cleared + 1) * 400 * lvl;
       setScore((s) => s + gained);
       setLines((l) => l + cleared);
+      if (lvl > prevLevelRef.current) {
+        prevLevelRef.current = lvl;
+        popupRef.current = { text: `LEVEL ${lvl}`, t: performance.now() };
+        forcePopupRender((n) => n + 1);
+        shakeRef.current = Math.max(shakeRef.current, 10);
+        if (settingsRef.current.sound) beep(990, 0.18, "triangle", 0.08);
+      }
       setLevel(lvl);
       setCombo(comboRef.current);
       flashRef.current = { rows, t: performance.now() };
@@ -270,6 +309,7 @@ export default function NeonStack() {
       spawnLineParticles(rows);
       // Popup text for tetris / combos
       const label =
+        tSpin ? `T-SPIN${cleared > 1 ? " x" + cleared : ""}` :
         cleared === 4 ? "TETRIS!" :
         cleared === 3 ? "TRIPLE" :
         cleared === 2 ? "DOUBLE" :
@@ -282,7 +322,13 @@ export default function NeonStack() {
     } else {
       comboRef.current = -1;
       setCombo(0);
+      if (tSpin) {
+        setScore((s) => s + 400 * levelFromLines(linesRef.current));
+        popupRef.current = { text: "T-SPIN", t: performance.now() };
+        forcePopupRender((n) => n + 1);
+      }
     }
+    lastActionRef.current = null;
     spawnNext();
   }, [spawnNext]);
 
@@ -315,6 +361,35 @@ export default function NeonStack() {
     }
   };
 
+  const spawnImpactParticles = (p: Piece) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const W = parseFloat(c.style.width);
+    const H = parseFloat(c.style.height);
+    const cell = Math.floor(Math.min(W / COLS, H / ROWS));
+    const boardW = cell * COLS;
+    const boardH = cell * ROWS;
+    const ox = Math.floor((W - boardW) / 2);
+    const oy = Math.floor((H - boardH) / 2);
+    const color = cssVar(`--piece-${p.key.toLowerCase()}`) || "#ffd60a";
+    for (const [x, y] of pieceCells(p)) {
+      for (let i = 0; i < 8; i++) {
+        const ang = -Math.PI + Math.random() * Math.PI; // upward dust
+        const sp = 60 + Math.random() * 180;
+        particlesRef.current.push({
+          x: ox + (x + 0.5) * cell,
+          y: oy + (y + 1) * cell,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp * 0.7,
+          life: 0,
+          max: 320 + Math.random() * 260,
+          color: Math.random() < 0.5 ? color : "#ffffff",
+          size: 2 + Math.random() * 2.5,
+        });
+      }
+    }
+  };
+
   const hardDropFlashRef = useRef<{ t: number; col: number; from: number; to: number; key: PieceKey } | null>(null);
 
   const move = useCallback((dx: number) => {
@@ -322,6 +397,7 @@ export default function NeonStack() {
     const np = tryMove(boardRef.current, pieceRef.current, dx, 0);
     if (np) {
       pieceRef.current = np;
+      lastActionRef.current = "move";
       if (settingsRef.current.sound) beep(400, 0.02, "square", 0.03);
     }
   }, []);
@@ -331,6 +407,7 @@ export default function NeonStack() {
     const np = tryRotate(boardRef.current, pieceRef.current, dir);
     if (np) {
       pieceRef.current = np;
+      lastActionRef.current = "rotate";
       if (settingsRef.current.sound) beep(520, 0.025, "square", 0.04);
     }
   }, []);
@@ -340,6 +417,7 @@ export default function NeonStack() {
     const np = tryMove(boardRef.current, pieceRef.current, 0, 1);
     if (np) {
       pieceRef.current = np;
+      lastActionRef.current = "move";
       setScore((s) => s + 1);
     } else {
       lockPiece();
@@ -357,6 +435,11 @@ export default function NeonStack() {
       key: pieceRef.current.key,
     };
     pieceRef.current = { ...pieceRef.current, y: pieceRef.current.y + d };
+    lastActionRef.current = "drop";
+    // Impact FX: screen shake + landing flash + dust particles
+    shakeRef.current = Math.min(14, 6 + d);
+    impactFlashRef.current = { t: performance.now(), y: pieceRef.current.y };
+    spawnImpactParticles(pieceRef.current);
     setScore((s) => s + d * 2);
     if (settingsRef.current.sound) beep(220, 0.06, "sawtooth", 0.06);
     lockPiece();
@@ -420,13 +503,17 @@ export default function NeonStack() {
       lastTsRef.current = ts;
 
       if (phaseRef.current === "playing" && pieceRef.current) {
-        const ms = gravityMs(levelFromLines(linesRef.current));
+        const diffMul =
+          settingsRef.current.difficulty === "easy" ? 1.6 :
+          settingsRef.current.difficulty === "hard" ? 0.55 : 1;
+        const ms = gravityMs(levelFromLines(linesRef.current)) * diffMul;
         dropAccRef.current += dt * (softDropRef.current ? 8 : 1);
         while (dropAccRef.current >= ms) {
           dropAccRef.current -= ms;
           const np = tryMove(boardRef.current, pieceRef.current, 0, 1);
           if (np) {
             pieceRef.current = np;
+            lastActionRef.current = "move";
             if (softDropRef.current) setScore((s) => s + 1);
           } else {
             lockPiece();
@@ -434,6 +521,10 @@ export default function NeonStack() {
           }
         }
         setElapsed(Math.floor((ts - startTsRef.current) / 1000));
+      }
+      // Decay shake
+      if (shakeRef.current > 0) {
+        shakeRef.current = Math.max(0, shakeRef.current - dt * 0.05);
       }
       // Update particles
       if (particlesRef.current.length) {
@@ -525,6 +616,14 @@ export default function NeonStack() {
     const W = parseFloat(c.style.width);
     const H = parseFloat(c.style.height);
     ctx.clearRect(0, 0, W, H);
+    // Screen shake
+    const sh = shakeRef.current;
+    if (sh > 0.2) {
+      const sx = (Math.random() - 0.5) * sh;
+      const sy = (Math.random() - 0.5) * sh;
+      ctx.save();
+      ctx.translate(sx, sy);
+    }
 
     const cell = Math.floor(Math.min(W / COLS, H / ROWS));
     const boardW = cell * COLS;
@@ -624,6 +723,21 @@ export default function NeonStack() {
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
     }
+
+    // Impact flash at landing row
+    if (impactFlashRef.current) {
+      const age = performance.now() - impactFlashRef.current.t;
+      if (age < 220) {
+        const a = 1 - age / 220;
+        ctx.fillStyle = `rgba(255,255,255,${0.55 * a})`;
+        const y = impactFlashRef.current.y;
+        ctx.fillRect(ox, oy + Math.max(0, y) * cell, boardW, cell * 2);
+      } else {
+        impactFlashRef.current = null;
+      }
+    }
+
+    if (sh > 0.2) ctx.restore();
   };
 
   // Touch / swipe controls
@@ -786,6 +900,8 @@ export default function NeonStack() {
             onAbout={() => setShowAbout(true)}
             onSettings={() => setShowSettings(true)}
             onHome={() => setPhase("menu")}
+            settings={settings}
+            setSettings={setSettings}
           />
         )}
 
@@ -809,6 +925,8 @@ export default function NeonStack() {
           onAbout={() => setShowAbout(true)}
           onSettings={() => setShowSettings(true)}
           onHome={() => setPhase("menu")}
+          settings={settings}
+          setSettings={setSettings}
         />
       )}
 
@@ -942,7 +1060,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome,
+  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome, settings, setSettings,
 }: {
   phase: Phase;
   stats: Stats;
@@ -954,6 +1072,8 @@ function Overlay({
   onAbout: () => void;
   onSettings: () => void;
   onHome: () => void;
+  settings: Settings;
+  setSettings: (s: Settings) => void;
 }) {
   return (
     <div
@@ -985,6 +1105,36 @@ function Overlay({
               BY HAIDER
             </p>
           </div>
+
+          <div className="w-full mb-4">
+            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2 text-center">
+              DIFFICULTY
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(["easy", "normal", "hard"] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setSettings({ ...settings, difficulty: d })}
+                  className={`py-2 rounded-xl text-[10px] font-bold tracking-[0.25em] border transition ${
+                    settings.difficulty === d
+                      ? "border-transparent text-primary-foreground"
+                      : "border-white/10 bg-white/[0.03] text-foreground/60"
+                  }`}
+                  style={
+                    settings.difficulty === d
+                      ? {
+                          background: "linear-gradient(120deg, var(--accent), var(--primary))",
+                          boxShadow: "0 6px 20px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,0.4)",
+                        }
+                      : undefined
+                  }
+                >
+                  {d.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
 
           <button
             onClick={onStart}
@@ -1025,6 +1175,26 @@ function Overlay({
               <BestStat label="LINES" value={stats.bestLines} />
               <BestStat label="GAMES" value={stats.gamesPlayed} />
             </div>
+            {stats.topScores && stats.topScores.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2">
+                  TOP 5
+                </p>
+                <ol className="space-y-1">
+                  {stats.topScores.slice(0, 5).map((sc, i) => (
+                    <li key={i} className="flex justify-between text-[11px] tabular-nums">
+                      <span className="text-foreground/50">#{i + 1}</span>
+                      <span
+                        className="font-bold"
+                        style={i === 0 ? { color: "var(--accent)" } : undefined}
+                      >
+                        {sc}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1171,6 +1341,16 @@ function SettingsPanel({
         </Row>
         <Row label="Music">
           <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
+        </Row>
+        <Row label="Difficulty">
+          <div className="flex gap-1">
+            {(["easy", "normal", "hard"] as const).map((d) => (
+              <button key={d} onClick={() => setSettings({ ...settings, difficulty: d })}
+                className={`px-2 py-1 text-xs rounded-md border capitalize ${settings.difficulty === d ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                {d}
+              </button>
+            ))}
+          </div>
         </Row>
         <Row label="Controls">
           <div className="flex gap-1">
