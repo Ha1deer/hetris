@@ -1055,7 +1055,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome,
+  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome, settings, setSettings,
 }: {
   phase: Phase;
   stats: Stats;
@@ -1067,6 +1067,8 @@ function Overlay({
   onAbout: () => void;
   onSettings: () => void;
   onHome: () => void;
+  settings: Settings;
+  setSettings: (s: Settings) => void;
 }) {
   return (
     <div
