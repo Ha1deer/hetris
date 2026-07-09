@@ -1095,6 +1095,8 @@ function Overlay({
             </p>
           </div>
 
+          <DifficultyPicker />
+
           <button
             onClick={onStart}
             className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden"
