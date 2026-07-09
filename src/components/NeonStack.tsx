@@ -356,6 +356,35 @@ export default function NeonStack() {
     }
   };
 
+  const spawnImpactParticles = (p: Piece) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const W = parseFloat(c.style.width);
+    const H = parseFloat(c.style.height);
+    const cell = Math.floor(Math.min(W / COLS, H / ROWS));
+    const boardW = cell * COLS;
+    const boardH = cell * ROWS;
+    const ox = Math.floor((W - boardW) / 2);
+    const oy = Math.floor((H - boardH) / 2);
+    const color = cssVar(`--piece-${p.key.toLowerCase()}`) || "#ffd60a";
+    for (const [x, y] of pieceCells(p)) {
+      for (let i = 0; i < 8; i++) {
+        const ang = -Math.PI + Math.random() * Math.PI; // upward dust
+        const sp = 60 + Math.random() * 180;
+        particlesRef.current.push({
+          x: ox + (x + 0.5) * cell,
+          y: oy + (y + 1) * cell,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp * 0.7,
+          life: 0,
+          max: 320 + Math.random() * 260,
+          color: Math.random() < 0.5 ? color : "#ffffff",
+          size: 2 + Math.random() * 2.5,
+        });
+      }
+    }
+  };
+
   const hardDropFlashRef = useRef<{ t: number; col: number; from: number; to: number; key: PieceKey } | null>(null);
 
   const move = useCallback((dx: number) => {
