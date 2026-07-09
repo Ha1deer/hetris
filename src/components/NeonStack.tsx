@@ -498,13 +498,17 @@ export default function NeonStack() {
       lastTsRef.current = ts;
 
       if (phaseRef.current === "playing" && pieceRef.current) {
-        const ms = gravityMs(levelFromLines(linesRef.current));
+        const diffMul =
+          settingsRef.current.difficulty === "easy" ? 1.6 :
+          settingsRef.current.difficulty === "hard" ? 0.55 : 1;
+        const ms = gravityMs(levelFromLines(linesRef.current)) * diffMul;
         dropAccRef.current += dt * (softDropRef.current ? 8 : 1);
         while (dropAccRef.current >= ms) {
           dropAccRef.current -= ms;
           const np = tryMove(boardRef.current, pieceRef.current, 0, 1);
           if (np) {
             pieceRef.current = np;
+            lastActionRef.current = "move";
             if (softDropRef.current) setScore((s) => s + 1);
           } else {
             lockPiece();
@@ -512,6 +516,10 @@ export default function NeonStack() {
           }
         }
         setElapsed(Math.floor((ts - startTsRef.current) / 1000));
+      }
+      // Decay shake
+      if (shakeRef.current > 0) {
+        shakeRef.current = Math.max(0, shakeRef.current - dt * 0.05);
       }
       // Update particles
       if (particlesRef.current.length) {
