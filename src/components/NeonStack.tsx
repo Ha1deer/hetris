@@ -295,14 +295,14 @@ export default function NeonStack() {
       if (tSpin) gained += (cleared + 1) * 400 * lvl;
       setScore((s) => s + gained);
       setLines((l) => l + cleared);
-      setLevel((prev) => {
-        if (lvl > prev) {
-          popupRef.current = { text: `LEVEL ${lvl}`, t: performance.now() };
-          forcePopupRender((n) => n + 1);
-          if (settingsRef.current.sound) beep(990, 0.18, "triangle", 0.08);
-        }
-        return lvl;
-      });
+      if (lvl > prevLevelRef.current) {
+        prevLevelRef.current = lvl;
+        popupRef.current = { text: `LEVEL ${lvl}`, t: performance.now() };
+        forcePopupRender((n) => n + 1);
+        shakeRef.current = Math.max(shakeRef.current, 10);
+        if (settingsRef.current.sound) beep(990, 0.18, "triangle", 0.08);
+      }
+      setLevel(lvl);
       setCombo(comboRef.current);
       flashRef.current = { rows, t: performance.now() };
       // Burst particles per cleared row
