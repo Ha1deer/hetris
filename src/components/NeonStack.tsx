@@ -1170,6 +1170,26 @@ function Overlay({
               <BestStat label="LINES" value={stats.bestLines} />
               <BestStat label="GAMES" value={stats.gamesPlayed} />
             </div>
+            {stats.topScores && stats.topScores.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2">
+                  TOP 5
+                </p>
+                <ol className="space-y-1">
+                  {stats.topScores.slice(0, 5).map((sc, i) => (
+                    <li key={i} className="flex justify-between text-[11px] tabular-nums">
+                      <span className="text-foreground/50">#{i + 1}</span>
+                      <span
+                        className="font-bold"
+                        style={i === 0 ? { color: "var(--accent)" } : undefined}
+                      >
+                        {sc}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         </div>
       )}
