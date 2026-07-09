@@ -244,6 +244,9 @@ export default function NeonStack() {
           bestLines: Math.max(s.bestLines, finalLines),
           bestTimeSec: Math.max(s.bestTimeSec, finalTime),
           gamesPlayed: s.gamesPlayed + 1,
+          topScores: [...(s.topScores ?? []), finalScore]
+            .sort((a, b) => b - a)
+            .slice(0, 5),
         };
         try { localStorage.setItem(STATS_KEY, JSON.stringify(next)); } catch {}
         try { localStorage.setItem(HS_KEY, String(next.bestScore)); } catch {}
