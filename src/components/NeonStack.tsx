@@ -1101,7 +1101,35 @@ function Overlay({
             </p>
           </div>
 
-          <DifficultyPicker />
+          <div className="w-full mb-4">
+            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2 text-center">
+              DIFFICULTY
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(["easy", "normal", "hard"] as const).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setSettings({ ...settings, difficulty: d })}
+                  className={`py-2 rounded-xl text-[10px] font-bold tracking-[0.25em] border transition ${
+                    settings.difficulty === d
+                      ? "border-transparent text-primary-foreground"
+                      : "border-white/10 bg-white/[0.03] text-foreground/60"
+                  }`}
+                  style={
+                    settings.difficulty === d
+                      ? {
+                          background: "linear-gradient(120deg, var(--accent), var(--primary))",
+                          boxShadow: "0 6px 20px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,0.4)",
+                        }
+                      : undefined
+                  }
+                >
+                  {d.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
 
           <button
             onClick={onStart}
