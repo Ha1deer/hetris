@@ -611,6 +611,14 @@ export default function NeonStack() {
     const W = parseFloat(c.style.width);
     const H = parseFloat(c.style.height);
     ctx.clearRect(0, 0, W, H);
+    // Screen shake
+    const sh = shakeRef.current;
+    if (sh > 0.2) {
+      const sx = (Math.random() - 0.5) * sh;
+      const sy = (Math.random() - 0.5) * sh;
+      ctx.save();
+      ctx.translate(sx, sy);
+    }
 
     const cell = Math.floor(Math.min(W / COLS, H / ROWS));
     const boardW = cell * COLS;
@@ -710,6 +718,21 @@ export default function NeonStack() {
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
     }
+
+    // Impact flash at landing row
+    if (impactFlashRef.current) {
+      const age = performance.now() - impactFlashRef.current.t;
+      if (age < 220) {
+        const a = 1 - age / 220;
+        ctx.fillStyle = `rgba(255,255,255,${0.55 * a})`;
+        const y = impactFlashRef.current.y;
+        ctx.fillRect(ox, oy + Math.max(0, y) * cell, boardW, cell * 2);
+      } else {
+        impactFlashRef.current = null;
+      }
+    }
+
+    if (sh > 0.2) ctx.restore();
   };
 
   // Touch / swipe controls
