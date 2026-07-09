@@ -895,6 +895,8 @@ export default function NeonStack() {
             onAbout={() => setShowAbout(true)}
             onSettings={() => setShowSettings(true)}
             onHome={() => setPhase("menu")}
+            settings={settings}
+            setSettings={setSettings}
           />
         )}
 
@@ -918,6 +920,8 @@ export default function NeonStack() {
           onAbout={() => setShowAbout(true)}
           onSettings={() => setShowSettings(true)}
           onHome={() => setPhase("menu")}
+          settings={settings}
+          setSettings={setSettings}
         />
       )}
 
