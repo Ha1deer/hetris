@@ -33,6 +33,7 @@ interface Settings {
   control: ControlMode;
   swipeSensitivity: number; // px per cell
   handed: "right" | "left";
+  difficulty: "easy" | "normal" | "hard";
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: Settings = {
   control: "both",
   swipeSensitivity: 24,
   handed: "right",
+  difficulty: "normal",
 };
 
 const HS_KEY = "neonstack:highscore";
@@ -55,15 +57,20 @@ interface Stats {
   bestLines: number;
   bestTimeSec: number;
   gamesPlayed: number;
+  topScores?: number[];
 }
 
 function loadStats(): Stats {
   if (typeof window === "undefined") return { bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 };
   try {
     const raw = localStorage.getItem(STATS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (!Array.isArray(s.topScores)) s.topScores = [];
+      return s;
+    }
   } catch {}
-  return { bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 };
+  return { bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0, topScores: [] };
 }
 function loadSettings(): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
