@@ -268,22 +268,43 @@ export default function NeonStack() {
   const lockPiece = useCallback(() => {
     const p = pieceRef.current;
     if (!p) return;
+    // T-spin detection: last action was rotate on a T, and >=3 corners of its
+    // 3x3 bounding box center are blocked.
+    let tSpin = false;
+    if (p.key === "T" && lastActionRef.current === "rotate") {
+      const cx = p.x + 1, cy = p.y + 1;
+      let corners = 0;
+      for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const xx = cx + dx, yy = cy + dy;
+        if (xx < 0 || xx >= COLS || yy >= ROWS || (yy >= 0 && boardRef.current[yy][xx])) corners++;
+      }
+      if (corners >= 3) tSpin = true;
+    }
     boardRef.current = merge(boardRef.current, p);
     const { board: nb, cleared, rows } = clearLines(boardRef.current);
     boardRef.current = nb;
     if (cleared > 0) {
       comboRef.current += 1;
       const lvl = levelFromLines(linesRef.current + cleared);
-      const gained = lineScore(cleared, lvl, comboRef.current + 1);
+      let gained = lineScore(cleared, lvl, comboRef.current + 1);
+      if (tSpin) gained += (cleared + 1) * 400 * lvl;
       setScore((s) => s + gained);
       setLines((l) => l + cleared);
-      setLevel(lvl);
+      setLevel((prev) => {
+        if (lvl > prev) {
+          popupRef.current = { text: `LEVEL ${lvl}`, t: performance.now() };
+          forcePopupRender((n) => n + 1);
+          if (settingsRef.current.sound) beep(990, 0.18, "triangle", 0.08);
+        }
+        return lvl;
+      });
       setCombo(comboRef.current);
       flashRef.current = { rows, t: performance.now() };
       // Burst particles per cleared row
       spawnLineParticles(rows);
       // Popup text for tetris / combos
       const label =
+        tSpin ? `T-SPIN${cleared > 1 ? " x" + cleared : ""}` :
         cleared === 4 ? "TETRIS!" :
         cleared === 3 ? "TRIPLE" :
         cleared === 2 ? "DOUBLE" :
@@ -296,7 +317,13 @@ export default function NeonStack() {
     } else {
       comboRef.current = -1;
       setCombo(0);
+      if (tSpin) {
+        setScore((s) => s + 400 * levelFromLines(linesRef.current));
+        popupRef.current = { text: "T-SPIN", t: performance.now() };
+        forcePopupRender((n) => n + 1);
+      }
     }
+    lastActionRef.current = null;
     spawnNext();
   }, [spawnNext]);
 
