@@ -11,9 +11,7 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
   },
   server: {
-    // http scheme is required so relative "./" asset URLs in the SPA bundle
-    // resolve correctly from the local file:// -> http://localhost bridge.
-    androidScheme: "http",
+    androidScheme: "https",
     hostname: "localhost",
     cleartext: false,
   },
