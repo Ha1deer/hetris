@@ -14,7 +14,9 @@
     "build:mobile": "node scripts/fetch-mobile-assets.mjs && vite build --config vite.mobile.config.ts",
     "cap:add:android": "bun run build:mobile && cap add android",
     "cap:sync": "bun run build:mobile && cap sync android",
-    "cap:open:android": "cap open android"
+    "cap:open:android": "cap open android",
+    "clean:android": "node -e \"require('node:fs').rmSync('android',{recursive:true,force:true})\"",
+    "clean:spa": "node -e \"require('node:fs').rmSync('dist/spa',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
