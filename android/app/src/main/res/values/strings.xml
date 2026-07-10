@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HETRIS</string>
+    <string name="title_activity_main">HETRIS</string>
+    <string name="package_name">com.haider.hetris</string>
+    <string name="custom_url_scheme">com.haider.hetris</string>
+</resources>
