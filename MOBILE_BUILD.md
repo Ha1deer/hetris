@@ -19,11 +19,27 @@ build time by `scripts/fetch-mobile-assets.mjs` and bundled into
 - npm scripts: `build:mobile`, `cap:add:android`, `cap:sync`,
   `cap:open:android`, `clean:android`, `clean:spa`.
 
-> **IMPORTANT — do not run `npx cap sync` / `npx cap add android` directly.**
-> They skip the SPA build and fail with
+`bun run build` now builds both outputs:
+
+- the normal web app build
+- the Android/Capacitor offline bundle at **`dist/spa/index.html`**
+
+That means this exact Capacitor flow now works after `bun run build`:
+
+```bash
+bun install
+bun run build                 # creates dist/spa/index.html for Capacitor
+bunx cap add android          # first time only; fails if android/ already exists
+bunx cap sync android
+bunx cap open android
+```
+
+If `android/` already exists from an older appId/build, run `bun run clean:android`
+before `bunx cap add android`, or skip `cap add` and run `bunx cap sync android`.
+
+> Safer shortcut: `bun run cap:add:android` and `bun run cap:sync` still build
+> the offline SPA first, so they also prevent
 > `Could not find the web assets directory: ./dist/spa`.
-> Always use the `bun run cap:*` scripts below — they build the offline SPA
-> into `dist/spa/` first, then invoke Capacitor.
 
 ## One-time setup (on your machine)
 
@@ -41,13 +57,18 @@ bun install                       # or: npm install
 #    Capacitor bakes appId into the folder and won't rename in place.
 bun run clean:android             # cross-platform; or: rm -rf android
 
-# 3. Build the offline SPA and generate the native Android project
-bun run cap:add:android
+# 3. Build web + offline SPA bundle
+bun run build
+#   ⇒ dist/spa/index.html  (Capacitor webDir)
+
+# 4. Generate the native Android project
+bunx cap add android
 #   ⇒ dist/spa/  (offline web bundle)
 #   ⇒ android/   (Gradle project with appId com.haider.hetris)
 
-# 4. Open in Android Studio
-bun run cap:open:android
+# 5. Copy the web bundle into Android and open Android Studio
+bunx cap sync android
+bunx cap open android
 ```
 
 ### Windows (PowerShell or cmd)
@@ -59,16 +80,21 @@ bun install                       # or: npm install
 # 2. Remove any old android/ folder (works in PowerShell AND cmd)
 bun run clean:android
 
-# 3. Build the offline SPA + generate the native Android project
-bun run cap:add:android
+# 3. Build web + offline SPA bundle
+bun run build
+#   ⇒ dist\spa\index.html  (Capacitor webDir)
 
-# 4. Open in Android Studio
-bun run cap:open:android
+# 4. Generate the native Android project
+bunx cap add android
+
+# 5. Copy the web bundle into Android and open Android Studio
+bunx cap sync android
+bunx cap open android
 ```
 
-If you see `Could not find the web assets directory: .\dist\spa`, you either
-ran `cap sync` directly (skip that — use `bun run cap:sync`) or the
-`build:mobile` step failed earlier. Run it standalone to see the real error:
+If you see `Could not find the web assets directory: .\dist\spa`, `bun run build`
+did not finish successfully or it was not run from the project root before
+`bunx cap sync android`. Run the mobile build standalone to see the real error:
 
 ```powershell
 bun run build:mobile
@@ -85,7 +111,8 @@ In Android Studio: **File → Sync Project with Gradle Files**, then
 On macOS/Linux:
 
 ```bash
-bun run cap:sync                       # rebuild SPA + sync into android/
+bun run build                          # creates dist/spa/index.html
+bunx cap sync android                  # copies dist/spa into android/
 cd android
 ./gradlew assembleDebug                # → app/build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease              # release build
@@ -94,7 +121,8 @@ cd android
 On Windows (PowerShell / cmd), use `gradlew.bat` and backslashes are fine:
 
 ```powershell
-bun run cap:sync
+bun run build                          # creates dist\spa\index.html
+bunx cap sync android                  # copies dist\spa into android\
 cd android
 .\gradlew.bat assembleDebug            # → app\build\outputs\apk\debug\app-debug.apk
 .\gradlew.bat assembleRelease
@@ -131,7 +159,8 @@ sdk.dir=C:/Users/you/AppData/Local/Android/Sdk
 ## After code changes
 
 ```bash
-bun run cap:sync          # rebuild SPA + copy into android/
+bun run build             # rebuild web + offline SPA
+bunx cap sync android     # copy dist/spa into android/
 # then Run ▶ in Android Studio, or ./gradlew assembleDebug
 ```
 

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "bun run build:web && bun run build:mobile",
+    "build:web": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
