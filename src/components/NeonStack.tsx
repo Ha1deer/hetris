@@ -195,26 +195,65 @@ export default function NeonStack() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<Stats>({ bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 });
   const [mounted, setMounted] = useState(false);
+  const [unlocked, setUnlocked] = useState<string[]>([]);
+  const [daily, setDaily] = useState<{ date: string; done: boolean }>({ date: "", done: false });
   useEffect(() => {
     setSettings(loadSettings());
     setStats(loadStats());
+    setUnlocked(loadAchievements());
+    setDaily(loadDaily());
     setMounted(true);
   }, []);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showTips, setShowTips] = useState(false);
+  const [showAch, setShowAch] = useState(false);
+  const [loadPct, setLoadPct] = useState(0);
   const musicRef = useRef<HTMLAudioElement | null>(null);
+  const trackRef = useRef(0);
 
-  // Auto-dismiss intro after 2s (no tap-to-skip)
+  // Apply the selected gameplay theme as CSS variables on :root so both the
+  // canvas (via cssVar) and the DOM chrome repaint together.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const t = THEMES[settings.theme] ?? THEMES.space;
+    const root = document.documentElement;
+    (Object.keys(t.pieces) as PieceKey[]).forEach((k) => {
+      root.style.setProperty(`--piece-${k.toLowerCase()}`, t.pieces[k]);
+    });
+    root.style.setProperty("--space-glow", t.glow);
+    root.style.setProperty("--lane-top", t.laneTop);
+    root.style.setProperty("--lane-bottom", t.laneBottom);
+    root.style.setProperty("--board-frame", t.frame);
+  }, [settings.theme]);
+
+  // Auto-dismiss intro after 2s (no tap-to-skip) → loading screen
   useEffect(() => {
     if (phase !== "intro") return;
-    const t = setTimeout(() => {
+    const t = setTimeout(() => setPhase("loading"), 2000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Loading screen — fills a progress bar, then routes to menu / picker.
+  useEffect(() => {
+    if (phase !== "loading") return;
+    setLoadPct(0);
+    const started = performance.now();
+    const DUR = 1800;
+    let raf = 0;
+    const step = () => {
+      const pct = Math.min(100, ((performance.now() - started) / DUR) * 100);
+      setLoadPct(pct);
+      if (pct < 100) raf = requestAnimationFrame(step);
+      else {
       // First-launch control picker
       let picked = false;
       try { picked = !!localStorage.getItem(CTRL_PICKED_KEY); } catch {}
       setPhase(picked ? "menu" : "pickControls");
-    }, 2000);
-    return () => clearTimeout(t);
+      }
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
   }, [phase]);
 
   // Background music — always on unless disabled in settings.
@@ -224,7 +263,7 @@ export default function NeonStack() {
     const audio = musicRef.current;
     if (!audio) return;
     audio.volume = 0.45;
-    audio.loop = true;
+    audio.loop = false; // playlist: advance to the next track on end
     if (settings.music) {
       audio.play().catch(() => {});
     } else {
