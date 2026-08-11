@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import haiderIntro from "@/assets/haider-intro.png.asset.json";
 import soundtrack from "@/assets/soundtrack.mp3.asset.json";
+import puzzlePiece from "@/assets/puzzle-piece.mp3.asset.json";
+import menuBg from "@/assets/menu-bg-portrait.jpg.asset.json";
+import loadingBg from "@/assets/loading-bg.jpg.asset.json";
 import {
   Bag,
   Board,
@@ -24,7 +27,39 @@ import {
 } from "@/lib/tetris";
 
 type ControlMode = "buttons" | "swipe" | "both";
-type Phase = "intro" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
+type Phase = "intro" | "loading" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
+export type ThemeKey = "space" | "aurora" | "sunset";
+
+/** Gameplay themes — each one repaints the board, pieces and glow. */
+const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>; glow: string; laneTop: string; laneBottom: string; frame: string; swatch: string[] }> = {
+  space: {
+    name: "Space",
+    pieces: { I: "#57c7ff", O: "#ffd76a", T: "#e07bff", S: "#6ef2a6", Z: "#ff6a5e", J: "#7f8cff", L: "#ffa845" },
+    glow: "#ffc23a",
+    laneTop: "rgba(90,150,255,0.06)",
+    laneBottom: "rgba(255,180,60,0.08)",
+    frame: "rgba(255,196,80,0.55)",
+    swatch: ["#03060f", "#0a1330", "#f0b429", "#ffe6a7"],
+  },
+  aurora: {
+    name: "Aurora Ice",
+    pieces: { I: "#8ff0ff", O: "#d8f6ff", T: "#9ea8ff", S: "#7dffc4", Z: "#5ec8ff", J: "#6f7dff", L: "#b6ffe4" },
+    glow: "#8ff0ff",
+    laneTop: "rgba(120,255,230,0.06)",
+    laneBottom: "rgba(90,140,255,0.09)",
+    frame: "rgba(150,240,255,0.55)",
+    swatch: ["#02100f", "#062033", "#7de8ff", "#d8fff4"],
+  },
+  sunset: {
+    name: "Retro Sunset",
+    pieces: { I: "#ff9f45", O: "#ffd166", T: "#ff5d8f", S: "#ffb703", Z: "#f94144", J: "#9b5de5", L: "#ff7b54" },
+    glow: "#ff6f91",
+    laneTop: "rgba(255,120,150,0.07)",
+    laneBottom: "rgba(255,190,80,0.09)",
+    frame: "rgba(255,140,110,0.55)",
+    swatch: ["#170617", "#3a0b3a", "#ff5d8f", "#ffd166"],
+  },
+};
 
 interface Settings {
   ghost: boolean;
@@ -34,6 +69,7 @@ interface Settings {
   swipeSensitivity: number; // px per cell
   handed: "right" | "left";
   difficulty: "easy" | "normal" | "hard";
+  theme: ThemeKey;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -44,6 +80,7 @@ const DEFAULT_SETTINGS: Settings = {
   swipeSensitivity: 24,
   handed: "right",
   difficulty: "normal",
+  theme: "space",
 };
 
 const HS_KEY = "neonstack:highscore";
@@ -51,6 +88,52 @@ const STATS_KEY = "neonstack:stats";
 const SET_KEY = "neonstack:settings";
 const TIPS_KEY = "neonstack:tipsSeen";
 const CTRL_PICKED_KEY = "neonstack:ctrlPicked";
+const ACH_KEY = "hetris:achievements";
+/** Music playlist — loops through both tracks in sequence. */
+const TRACKS = [soundtrack.url, puzzlePiece.url];
+const DAILY_KEY = "hetris:daily";
+
+/** Unlockable achievements — checked after every run. */
+const ACHIEVEMENTS: { id: string; name: string; desc: string; test: (r: { score: number; lines: number; timeSec: number; level: number }, s: Stats) => boolean }[] = [
+  { id: "first", name: "Lift Off", desc: "Finish your first run", test: (_r, s) => s.gamesPlayed >= 1 },
+  { id: "l10", name: "Line Worker", desc: "Clear 10 lines in one run", test: (r) => r.lines >= 10 },
+  { id: "l40", name: "Stack Master", desc: "Clear 40 lines in one run", test: (r) => r.lines >= 40 },
+  { id: "s5k", name: "High Roller", desc: "Score 5,000 points", test: (r) => r.score >= 5000 },
+  { id: "s20k", name: "Cosmic Legend", desc: "Score 20,000 points", test: (r) => r.score >= 20000 },
+  { id: "lvl8", name: "Warp Speed", desc: "Reach level 8", test: (r) => r.level >= 8 },
+  { id: "t5", name: "Marathon", desc: "Survive 5 minutes", test: (r) => r.timeSec >= 300 },
+  { id: "g25", name: "Dedicated", desc: "Play 25 games", test: (_r, s) => s.gamesPlayed >= 25 },
+];
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+/** Deterministic daily goal from the date — same for the whole day. */
+function dailyGoal(): { lines: number; score: number } {
+  const d = todayKey();
+  let h = 0;
+  for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) >>> 0;
+  return { lines: 8 + (h % 13), score: 1500 + (h % 7) * 500 };
+}
+function loadDaily(): { date: string; done: boolean } {
+  if (typeof window === "undefined") return { date: todayKey(), done: false };
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (v.date === todayKey()) return v;
+    }
+  } catch {}
+  return { date: todayKey(), done: false };
+}
+function loadAchievements(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(ACH_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
 
 interface Stats {
   bestScore: number;
@@ -114,26 +197,65 @@ export default function NeonStack() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<Stats>({ bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 });
   const [mounted, setMounted] = useState(false);
+  const [unlocked, setUnlocked] = useState<string[]>([]);
+  const [daily, setDaily] = useState<{ date: string; done: boolean }>({ date: "", done: false });
   useEffect(() => {
     setSettings(loadSettings());
     setStats(loadStats());
+    setUnlocked(loadAchievements());
+    setDaily(loadDaily());
     setMounted(true);
   }, []);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showTips, setShowTips] = useState(false);
+  const [showAch, setShowAch] = useState(false);
+  const [loadPct, setLoadPct] = useState(0);
   const musicRef = useRef<HTMLAudioElement | null>(null);
+  const trackRef = useRef(0);
 
-  // Auto-dismiss intro after 2s (no tap-to-skip)
+  // Apply the selected gameplay theme as CSS variables on :root so both the
+  // canvas (via cssVar) and the DOM chrome repaint together.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const t = THEMES[settings.theme] ?? THEMES.space;
+    const root = document.documentElement;
+    (Object.keys(t.pieces) as PieceKey[]).forEach((k) => {
+      root.style.setProperty(`--piece-${k.toLowerCase()}`, t.pieces[k]);
+    });
+    root.style.setProperty("--space-glow", t.glow);
+    root.style.setProperty("--lane-top", t.laneTop);
+    root.style.setProperty("--lane-bottom", t.laneBottom);
+    root.style.setProperty("--board-frame", t.frame);
+  }, [settings.theme]);
+
+  // Auto-dismiss intro after 2s (no tap-to-skip) → loading screen
   useEffect(() => {
     if (phase !== "intro") return;
-    const t = setTimeout(() => {
+    const t = setTimeout(() => setPhase("loading"), 2000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Loading screen — fills a progress bar, then routes to menu / picker.
+  useEffect(() => {
+    if (phase !== "loading") return;
+    setLoadPct(0);
+    const started = performance.now();
+    const DUR = 1800;
+    let raf = 0;
+    const step = () => {
+      const pct = Math.min(100, ((performance.now() - started) / DUR) * 100);
+      setLoadPct(pct);
+      if (pct < 100) raf = requestAnimationFrame(step);
+      else {
       // First-launch control picker
       let picked = false;
       try { picked = !!localStorage.getItem(CTRL_PICKED_KEY); } catch {}
       setPhase(picked ? "menu" : "pickControls");
-    }, 2000);
-    return () => clearTimeout(t);
+      }
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
   }, [phase]);
 
   // Background music — always on unless disabled in settings.
@@ -143,7 +265,7 @@ export default function NeonStack() {
     const audio = musicRef.current;
     if (!audio) return;
     audio.volume = 0.45;
-    audio.loop = true;
+    audio.loop = false; // playlist: advance to the next track on end
     if (settings.music) {
       audio.play().catch(() => {});
     } else {
@@ -255,6 +377,24 @@ export default function NeonStack() {
         };
         try { localStorage.setItem(STATS_KEY, JSON.stringify(next)); } catch {}
         try { localStorage.setItem(HS_KEY, String(next.bestScore)); } catch {}
+        // Achievements
+        try {
+          const run = { score: finalScore, lines: finalLines, timeSec: finalTime, level: levelFromLines(finalLines) };
+          const have = new Set(loadAchievements());
+          for (const a of ACHIEVEMENTS) if (!have.has(a.id) && a.test(run, next)) have.add(a.id);
+          const list = [...have];
+          localStorage.setItem(ACH_KEY, JSON.stringify(list));
+          setUnlocked(list);
+        } catch {}
+        // Daily challenge
+        try {
+          const goal = dailyGoal();
+          if (finalLines >= goal.lines && finalScore >= goal.score) {
+            const rec = { date: todayKey(), done: true };
+            localStorage.setItem(DAILY_KEY, JSON.stringify(rec));
+            setDaily(rec);
+          }
+        } catch {}
         return next;
       });
       setPhase("over");
@@ -583,7 +723,7 @@ export default function NeonStack() {
       grid: cssVar("--border"),
       panel: cssVar("--card"),
     } as Record<string, string>;
-  }, []);
+  }, [settings.theme, mounted]);
 
   const drawCell = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, key: PieceKey, opts: { ghost?: boolean } = {}) => {
     const col = colors?.[key] || "#fff";
@@ -631,10 +771,14 @@ export default function NeonStack() {
     const ox = Math.floor((W - boardW) / 2);
     const oy = Math.floor((H - boardH) / 2);
 
-    // subtle vertical lane gradient — gives depth without a hard frame
+    const theme = THEMES[settingsRef.current.theme] ?? THEMES.space;
+
+    // playfield backdrop + vertical lane gradient
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(ox, oy, boardW, boardH);
     const grad = ctx.createLinearGradient(0, oy, 0, oy + boardH);
-    grad.addColorStop(0, "rgba(120, 200, 255, 0.04)");
-    grad.addColorStop(1, "rgba(180, 80, 220, 0.06)");
+    grad.addColorStop(0, theme.laneTop);
+    grad.addColorStop(1, theme.laneBottom);
     ctx.fillStyle = grad;
     ctx.fillRect(ox, oy, boardW, boardH);
 
@@ -653,6 +797,19 @@ export default function NeonStack() {
       ctx.lineTo(ox + boardW, oy + y * cell + 0.5);
       ctx.stroke();
     }
+
+    // crisp glowing playfield frame
+    ctx.save();
+    ctx.strokeStyle = theme.frame;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = theme.glow;
+    ctx.shadowBlur = 14;
+    ctx.strokeRect(ox - 1, oy - 1, boardW + 2, boardH + 2);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox + 2, oy + 2, boardW - 4, boardH - 4);
+    ctx.restore();
 
     // board cells
     const b = boardRef.current;
@@ -810,8 +967,59 @@ export default function NeonStack() {
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-background text-foreground overflow-hidden">
-      {/* Background soundtrack — always on unless disabled in settings */}
-      <audio ref={musicRef} src={soundtrack.url} preload="auto" loop />
+      {/* Background playlist — always on unless disabled in settings */}
+      <audio
+        ref={musicRef}
+        src={TRACKS[0]}
+        preload="auto"
+        onEnded={() => {
+          const a = musicRef.current;
+          if (!a) return;
+          trackRef.current = (trackRef.current + 1) % TRACKS.length;
+          a.src = TRACKS[trackRef.current];
+          if (settingsRef.current.music) a.play().catch(() => {});
+        }}
+      />
+
+      {/* Loading screen — shown right after the intro */}
+      {phase === "loading" && (
+        <div className="fixed inset-0 z-[55] bg-black">
+          <img
+            src={loadingBg.url}
+            alt="HETRIS loading"
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/90" />
+          <div className="absolute inset-x-0 bottom-[14%] flex flex-col items-center px-10">
+            <h2
+              className="text-4xl font-black tracking-[0.35em]"
+              style={{
+                background: "linear-gradient(120deg, #ffd76a, #ffb43a, #ffe9a8, #ffb43a)",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "hetris-shine 4s linear infinite",
+              }}
+            >
+              HETRIS
+            </h2>
+            <div className="mt-6 w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-100"
+                style={{
+                  width: `${loadPct}%`,
+                  background: "linear-gradient(90deg, #ffb43a, #ffe9a8)",
+                  boxShadow: "0 0 16px rgba(255,180,60,0.8)",
+                }}
+              />
+            </div>
+            <p className="mt-3 text-[9px] tracking-[0.45em] text-white/50">
+              LOADING {Math.floor(loadPct)}%
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Intro splash — Developed by Haider */}
       {phase === "intro" && (
@@ -839,7 +1047,7 @@ export default function NeonStack() {
       )}
 
       {/* Top HUD — only visible during active gameplay states */}
-      {phase !== "menu" && phase !== "intro" && phase !== "pickControls" && (
+      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" && (
         <div className="relative z-10 flex items-center justify-between px-3 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 text-xs">
           <div className="flex gap-3">
             <Stat label="SCORE" value={score.toString()} />
@@ -862,7 +1070,7 @@ export default function NeonStack() {
         <canvas ref={canvasRef} className="absolute inset-0" />
 
         {/* Floating Next overlay (only during play / pause) */}
-        {phase !== "menu" && phase !== "intro" && phase !== "pickControls" && phase !== "over" && (
+        {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" && phase !== "over" && (
           <div className="absolute top-2 right-2 z-10 pointer-events-none flex flex-col items-end gap-1">
             <span className="text-[9px] tracking-[0.25em] text-foreground/60">NEXT</span>
             <div className="flex flex-col gap-1">
@@ -888,7 +1096,7 @@ export default function NeonStack() {
           </div>
         )}
 
-        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "menu" && (
+        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "loading" && phase !== "menu" && (
           <Overlay
             phase={phase}
             stats={stats}
@@ -927,11 +1135,14 @@ export default function NeonStack() {
           onHome={() => setPhase("menu")}
           settings={settings}
           setSettings={setSettings}
+          onAchievements={() => setShowAch(true)}
+          daily={daily}
+          unlockedCount={unlocked.length}
         />
       )}
 
       {/* Control buttons — hidden in menu */}
-      {phase !== "menu" && phase !== "intro" && phase !== "pickControls" &&
+      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
         <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
           <div className={`grid grid-cols-2 gap-3 items-center ${settings.handed === "left" ? "[direction:rtl]" : ""}`}>
@@ -961,6 +1172,7 @@ export default function NeonStack() {
 
       {showSettings && <SettingsPanel settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} stats={stats} />}
       {showAbout && <AboutPanel onClose={() => setShowAbout(false)} />}
+      {showAch && <AchievementsPanel unlocked={unlocked} onClose={() => setShowAch(false)} />}
     </div>
   );
 }
@@ -1061,6 +1273,7 @@ function CtrlBtn({
 
 function Overlay({
   phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome, settings, setSettings,
+  onAchievements, daily, unlockedCount,
 }: {
   phase: Phase;
   stats: Stats;
@@ -1074,7 +1287,11 @@ function Overlay({
   onHome: () => void;
   settings: Settings;
   setSettings: (s: Settings) => void;
+  onAchievements?: () => void;
+  daily?: { date: string; done: boolean };
+  unlockedCount?: number;
 }) {
+  const goal = phase === "menu" ? dailyGoal() : null;
   return (
     <div
       className={`${phase === "menu" ? "fixed z-40" : "absolute"} inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto ${phase === "menu" ? "hetris-menu-bg" : ""}`}
@@ -1085,7 +1302,19 @@ function Overlay({
       }
     >
       {phase === "menu" && (
-        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
+        <>
+          <img
+            src={menuBg.url}
+            alt=""
+            aria-hidden
+            className="fixed inset-0 w-full h-full object-cover pointer-events-none"
+            draggable={false}
+          />
+          <div className="fixed inset-0 pointer-events-none bg-gradient-to-b from-black/40 via-black/25 to-black/85" />
+        </>
+      )}
+      {phase === "menu" && (
+        <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
           <div className="mb-10 text-center">
             <h1
               className="text-6xl font-black tracking-[0.2em] leading-none"
@@ -1165,6 +1394,39 @@ function Overlay({
               <InfoIcon /> ABOUT
             </button>
           </div>
+
+          <button
+            onClick={onAchievements}
+            className="mt-2 w-full flex items-center justify-between px-4 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
+          >
+            <span className="flex items-center gap-2"><TrophyIcon /> AWARDS</span>
+            <span className="tabular-nums text-foreground/60">
+              {unlockedCount ?? 0}/{ACHIEVEMENTS.length}
+            </span>
+          </button>
+
+          {goal && (
+            <div
+              className="mt-4 w-full rounded-2xl border p-4 text-left backdrop-blur-md"
+              style={{
+                borderColor: daily?.done ? "var(--accent)" : "rgba(255,255,255,0.10)",
+                background: "rgba(0,0,0,0.35)",
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] tracking-[0.4em] text-foreground/50">DAILY CHALLENGE</p>
+                {daily?.done && (
+                  <span className="text-[9px] tracking-[0.3em] font-bold" style={{ color: "var(--accent)" }}>
+                    ★ DONE
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-foreground/85">
+                Clear <span className="font-bold">{goal.lines}</span> lines and score{" "}
+                <span className="font-bold">{goal.score}</span> in a single run.
+              </p>
+            </div>
+          )}
 
           <div className="mt-10 w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-4">
             <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">
@@ -1333,6 +1595,41 @@ function SettingsPanel({
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70 hover:text-foreground">✕</button>
         </div>
 
+        <div>
+          <p className="text-sm mb-2">Gameplay theme</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(Object.keys(THEMES) as ThemeKey[]).map((k) => {
+              const t = THEMES[k];
+              const on = settings.theme === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setSettings({ ...settings, theme: k })}
+                  className={`rounded-xl border p-2 text-left transition ${on ? "border-transparent" : "border-white/10"}`}
+                  style={
+                    on
+                      ? { background: "linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))", boxShadow: `0 0 0 1px ${t.frame}, 0 8px 24px -12px ${t.glow}` }
+                      : { background: "rgba(255,255,255,0.02)" }
+                  }
+                >
+                  <div className="flex gap-1 mb-1.5">
+                    {(["I", "O", "T", "Z"] as PieceKey[]).map((p) => (
+                      <span
+                        key={p}
+                        className="w-3 h-3 rounded-[3px]"
+                        style={{ background: t.pieces[p], boxShadow: `0 0 6px ${t.pieces[p]}` }}
+                      />
+                    ))}
+                  </div>
+                  <span className={`text-[10px] font-bold tracking-wider ${on ? "" : "text-foreground/55"}`}>
+                    {t.name.toUpperCase()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <Row label="Ghost piece">
           <Toggle on={settings.ghost} onChange={(v) => setSettings({ ...settings, ghost: v })} />
         </Row>
@@ -1397,6 +1694,69 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   );
 }
+
+function TrophyIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />
+      <path d="M12 14v4M9 20h6" />
+    </svg>
+  );
+}
+
+function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-3xl border border-white/10 p-5 space-y-3 animate-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,30,60,0.94), rgba(6,10,26,0.97))",
+          boxShadow: "0 20px 60px -10px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-black tracking-[0.35em] flex items-center gap-2"><TrophyIcon size={18} /> AWARDS</h3>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70">✕</button>
+        </div>
+        <p className="text-[10px] tracking-[0.3em] text-foreground/50">
+          {unlocked.length} / {ACHIEVEMENTS.length} UNLOCKED
+        </p>
+        <div className="space-y-2">
+          {ACHIEVEMENTS.map((a) => {
+            const on = unlocked.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                className="flex items-center gap-3 rounded-xl border p-3"
+                style={{
+                  borderColor: on ? "var(--accent)" : "rgba(255,255,255,0.08)",
+                  background: on ? "rgba(255,196,80,0.08)" : "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div
+                  className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
+                  style={{
+                    background: on ? "linear-gradient(140deg, var(--accent), var(--primary))" : "rgba(255,255,255,0.05)",
+                    color: on ? "var(--primary-foreground)" : "rgba(255,255,255,0.35)",
+                  }}
+                >
+                  <TrophyIcon size={18} />
+                </div>
+                <div className="text-left">
+                  <p className={`text-sm font-bold ${on ? "" : "text-foreground/50"}`}>{a.name}</p>
+                  <p className="text-[11px] text-foreground/50">{a.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!on)} className={`w-11 h-6 rounded-full transition ${on ? "bg-primary" : "bg-muted"} relative`}>
@@ -1536,7 +1896,7 @@ function TipsOverlay({ onClose }: { onClose: () => void }) {
             <b>Fast swipe down</b> — hard drop
           </Tip>
           <Tip icon={<SwapIcon />}>
-            <b>HOLD</b> — stash a piece for later
+            <b>Buttons</b> — D-pad moves, centre rotates, big key hard-drops
           </Tip>
         </ul>
         <button className="mt-6 w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold tracking-[0.3em] active:scale-95 transition">
