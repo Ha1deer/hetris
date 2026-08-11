@@ -1655,6 +1655,77 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   );
 }
+
+function TrophyIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />
+      <path d="M12 14v4M9 20h6" />
+    </svg>
+  );
+}
+
+function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-3xl border border-white/10 p-5 space-y-3 animate-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,30,60,0.94), rgba(6,10,26,0.97))",
+          boxShadow: "0 20px 60px -10px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-black tracking-[0.35em] flex items-center gap-2"><TrophyIcon size={18} /> AWARDS</h3>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70">✕</button>
+        </div>
+        <p className="text-[10px] tracking-[0.3em] text-foreground/50">
+          {unlocked.length} / {ACHIEVEMENTS.length} UNLOCKED
+        </p>
+        <div className="space-y-2">
+          {ACHIEVEMENTS.map((a) => {
+            const on = unlocked.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                className="flex items-center gap-3 rounded-xl border p-3"
+                style={{
+                  borderColor: on ? "var(--accent)" : "rgba(255,255,255,0.08)",
+                  background: on ? "rgba(255,196,80,0.08)" : "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div
+                  className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
+                  style={{
+                    background: on ? "linear-gradient(140deg, var(--accent), var(--primary))" : "rgba(255,255,255,0.05)",
+                    color: on ? "var(--primary-foreground)" : "rgba(255,255,255,0.35)",
+                  }}
+                >
+                  <TrophyIcon size={18} />
+                </div>
+                <div className="text-left">
+                  <p className={`text-sm font-bold ${on ? "" : "text-foreground/50"}`}>{a.name}</p>
+                  <p className="text-[11px] text-foreground/50">{a.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RowUnused({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm">{label}</span>
+      {children}
+    </div>
+  );
+}
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!on)} className={`w-11 h-6 rounded-full transition ${on ? "bg-primary" : "bg-muted"} relative`}>
