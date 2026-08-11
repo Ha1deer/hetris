@@ -1718,14 +1718,6 @@ function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose:
   );
 }
 
-function RowUnused({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm">{label}</span>
-      {children}
-    </div>
-  );
-}
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!on)} className={`w-11 h-6 rounded-full transition ${on ? "bg-primary" : "bg-muted"} relative`}>
