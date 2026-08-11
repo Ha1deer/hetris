@@ -89,6 +89,8 @@ const SET_KEY = "neonstack:settings";
 const TIPS_KEY = "neonstack:tipsSeen";
 const CTRL_PICKED_KEY = "neonstack:ctrlPicked";
 const ACH_KEY = "hetris:achievements";
+/** Music playlist — loops through both tracks in sequence. */
+const TRACKS = [soundtrack.url, puzzlePiece.url];
 const DAILY_KEY = "hetris:daily";
 
 /** Unlockable achievements — checked after every run. */
