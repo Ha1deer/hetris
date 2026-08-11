@@ -1135,11 +1135,14 @@ export default function NeonStack() {
           onHome={() => setPhase("menu")}
           settings={settings}
           setSettings={setSettings}
+          onAchievements={() => setShowAch(true)}
+          daily={daily}
+          unlockedCount={unlocked.length}
         />
       )}
 
       {/* Control buttons — hidden in menu */}
-      {phase !== "menu" && phase !== "intro" && phase !== "pickControls" &&
+      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
         <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
           <div className={`grid grid-cols-2 gap-3 items-center ${settings.handed === "left" ? "[direction:rtl]" : ""}`}>
@@ -1169,6 +1172,7 @@ export default function NeonStack() {
 
       {showSettings && <SettingsPanel settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} stats={stats} />}
       {showAbout && <AboutPanel onClose={() => setShowAbout(false)} />}
+      {showAch && <AchievementsPanel unlocked={unlocked} onClose={() => setShowAch(false)} />}
     </div>
   );
 }
