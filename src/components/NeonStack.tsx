@@ -1896,7 +1896,7 @@ function TipsOverlay({ onClose }: { onClose: () => void }) {
             <b>Fast swipe down</b> — hard drop
           </Tip>
           <Tip icon={<SwapIcon />}>
-            <b>HOLD</b> — stash a piece for later
+            <b>Buttons</b> — D-pad moves, centre rotates, big key hard-drops
           </Tip>
         </ul>
         <button className="mt-6 w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold tracking-[0.3em] active:scale-95 transition">
