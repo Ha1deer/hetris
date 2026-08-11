@@ -1591,6 +1591,41 @@ function SettingsPanel({
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70 hover:text-foreground">✕</button>
         </div>
 
+        <div>
+          <p className="text-sm mb-2">Gameplay theme</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(Object.keys(THEMES) as ThemeKey[]).map((k) => {
+              const t = THEMES[k];
+              const on = settings.theme === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setSettings({ ...settings, theme: k })}
+                  className={`rounded-xl border p-2 text-left transition ${on ? "border-transparent" : "border-white/10"}`}
+                  style={
+                    on
+                      ? { background: "linear-gradient(140deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))", boxShadow: `0 0 0 1px ${t.frame}, 0 8px 24px -12px ${t.glow}` }
+                      : { background: "rgba(255,255,255,0.02)" }
+                  }
+                >
+                  <div className="flex gap-1 mb-1.5">
+                    {(["I", "O", "T", "Z"] as PieceKey[]).map((p) => (
+                      <span
+                        key={p}
+                        className="w-3 h-3 rounded-[3px]"
+                        style={{ background: t.pieces[p], boxShadow: `0 0 6px ${t.pieces[p]}` }}
+                      />
+                    ))}
+                  </div>
+                  <span className={`text-[10px] font-bold tracking-wider ${on ? "" : "text-foreground/55"}`}>
+                    {t.name.toUpperCase()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <Row label="Ghost piece">
           <Toggle on={settings.ghost} onChange={(v) => setSettings({ ...settings, ghost: v })} />
         </Row>
