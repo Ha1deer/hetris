@@ -1047,7 +1047,7 @@ export default function NeonStack() {
       )}
 
       {/* Top HUD — only visible during active gameplay states */}
-      {phase !== "menu" && phase !== "intro" && phase !== "pickControls" && (
+      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" && (
         <div className="relative z-10 flex items-center justify-between px-3 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 text-xs">
           <div className="flex gap-3">
             <Stat label="SCORE" value={score.toString()} />
@@ -1070,7 +1070,7 @@ export default function NeonStack() {
         <canvas ref={canvasRef} className="absolute inset-0" />
 
         {/* Floating Next overlay (only during play / pause) */}
-        {phase !== "menu" && phase !== "intro" && phase !== "pickControls" && phase !== "over" && (
+        {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" && phase !== "over" && (
           <div className="absolute top-2 right-2 z-10 pointer-events-none flex flex-col items-end gap-1">
             <span className="text-[9px] tracking-[0.25em] text-foreground/60">NEXT</span>
             <div className="flex flex-col gap-1">
@@ -1096,7 +1096,7 @@ export default function NeonStack() {
           </div>
         )}
 
-        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "menu" && (
+        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "loading" && phase !== "menu" && (
           <Overlay
             phase={phase}
             stats={stats}
