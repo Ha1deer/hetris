@@ -1251,6 +1251,7 @@ function CtrlBtn({
 
 function Overlay({
   phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome, settings, setSettings,
+  onAchievements, daily, unlockedCount,
 }: {
   phase: Phase;
   stats: Stats;
@@ -1264,7 +1265,11 @@ function Overlay({
   onHome: () => void;
   settings: Settings;
   setSettings: (s: Settings) => void;
+  onAchievements?: () => void;
+  daily?: { date: string; done: boolean };
+  unlockedCount?: number;
 }) {
+  const goal = phase === "menu" ? dailyGoal() : null;
   return (
     <div
       className={`${phase === "menu" ? "fixed z-40" : "absolute"} inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto ${phase === "menu" ? "hetris-menu-bg" : ""}`}
@@ -1275,7 +1280,19 @@ function Overlay({
       }
     >
       {phase === "menu" && (
-        <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
+        <>
+          <img
+            src={menuBg.url}
+            alt=""
+            aria-hidden
+            className="fixed inset-0 w-full h-full object-cover pointer-events-none"
+            draggable={false}
+          />
+          <div className="fixed inset-0 pointer-events-none bg-gradient-to-b from-black/40 via-black/25 to-black/85" />
+        </>
+      )}
+      {phase === "menu" && (
+        <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
           <div className="mb-10 text-center">
             <h1
               className="text-6xl font-black tracking-[0.2em] leading-none"
@@ -1355,6 +1372,39 @@ function Overlay({
               <InfoIcon /> ABOUT
             </button>
           </div>
+
+          <button
+            onClick={onAchievements}
+            className="mt-2 w-full flex items-center justify-between px-4 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
+          >
+            <span className="flex items-center gap-2"><TrophyIcon /> AWARDS</span>
+            <span className="tabular-nums text-foreground/60">
+              {unlockedCount ?? 0}/{ACHIEVEMENTS.length}
+            </span>
+          </button>
+
+          {goal && (
+            <div
+              className="mt-4 w-full rounded-2xl border p-4 text-left backdrop-blur-md"
+              style={{
+                borderColor: daily?.done ? "var(--accent)" : "rgba(255,255,255,0.10)",
+                background: "rgba(0,0,0,0.35)",
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] tracking-[0.4em] text-foreground/50">DAILY CHALLENGE</p>
+                {daily?.done && (
+                  <span className="text-[9px] tracking-[0.3em] font-bold" style={{ color: "var(--accent)" }}>
+                    ★ DONE
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-foreground/85">
+                Clear <span className="font-bold">{goal.lines}</span> lines and score{" "}
+                <span className="font-bold">{goal.score}</span> in a single run.
+              </p>
+            </div>
+          )}
 
           <div className="mt-10 w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-4">
             <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">
