@@ -34,7 +34,7 @@ export type ThemeKey = "space" | "aurora" | "sunset";
 const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>; glow: string; laneTop: string; laneBottom: string; frame: string; swatch: string[] }> = {
   space: {
     name: "Space",
-    pieces: { I: "#57c7ff", O: "#ffd76a", T: "#e07bff", S: "#6ef2a6", Z: "#ff6a5e", J: "#7f8cff", L: "#ffa martin" as unknown as string },
+    pieces: { I: "#57c7ff", O: "#ffd76a", T: "#e07bff", S: "#6ef2a6", Z: "#ff6a5e", J: "#7f8cff", L: "#ffa845" },
     glow: "#ffc23a",
     laneTop: "rgba(90,150,255,0.06)",
     laneBottom: "rgba(255,180,60,0.08)",
