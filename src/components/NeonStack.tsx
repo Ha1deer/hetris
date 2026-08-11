@@ -377,6 +377,24 @@ export default function NeonStack() {
         };
         try { localStorage.setItem(STATS_KEY, JSON.stringify(next)); } catch {}
         try { localStorage.setItem(HS_KEY, String(next.bestScore)); } catch {}
+        // Achievements
+        try {
+          const run = { score: finalScore, lines: finalLines, timeSec: finalTime, level: levelFromLines(finalLines) };
+          const have = new Set(loadAchievements());
+          for (const a of ACHIEVEMENTS) if (!have.has(a.id) && a.test(run, next)) have.add(a.id);
+          const list = [...have];
+          localStorage.setItem(ACH_KEY, JSON.stringify(list));
+          setUnlocked(list);
+        } catch {}
+        // Daily challenge
+        try {
+          const goal = dailyGoal();
+          if (finalLines >= goal.lines && finalScore >= goal.score) {
+            const rec = { date: todayKey(), done: true };
+            localStorage.setItem(DAILY_KEY, JSON.stringify(rec));
+            setDaily(rec);
+          }
+        } catch {}
         return next;
       });
       setPhase("over");
