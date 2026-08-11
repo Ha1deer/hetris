@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import haiderIntro from "@/assets/haider-intro.png.asset.json";
 import soundtrack from "@/assets/soundtrack.mp3.asset.json";
+import puzzlePiece from "@/assets/puzzle-piece.mp3.asset.json";
+import menuBg from "@/assets/menu-bg-portrait.jpg.asset.json";
+import loadingBg from "@/assets/loading-bg.jpg.asset.json";
 import {
   Bag,
   Board,
@@ -24,7 +27,39 @@ import {
 } from "@/lib/tetris";
 
 type ControlMode = "buttons" | "swipe" | "both";
-type Phase = "intro" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
+type Phase = "intro" | "loading" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
+export type ThemeKey = "space" | "aurora" | "sunset";
+
+/** Gameplay themes — each one repaints the board, pieces and glow. */
+const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>; glow: string; laneTop: string; laneBottom: string; frame: string; swatch: string[] }> = {
+  space: {
+    name: "Space",
+    pieces: { I: "#57c7ff", O: "#ffd76a", T: "#e07bff", S: "#6ef2a6", Z: "#ff6a5e", J: "#7f8cff", L: "#ffa martin" as unknown as string },
+    glow: "#ffc23a",
+    laneTop: "rgba(90,150,255,0.06)",
+    laneBottom: "rgba(255,180,60,0.08)",
+    frame: "rgba(255,196,80,0.55)",
+    swatch: ["#03060f", "#0a1330", "#f0b429", "#ffe6a7"],
+  },
+  aurora: {
+    name: "Aurora Ice",
+    pieces: { I: "#8ff0ff", O: "#d8f6ff", T: "#9ea8ff", S: "#7dffc4", Z: "#5ec8ff", J: "#6f7dff", L: "#b6ffe4" },
+    glow: "#8ff0ff",
+    laneTop: "rgba(120,255,230,0.06)",
+    laneBottom: "rgba(90,140,255,0.09)",
+    frame: "rgba(150,240,255,0.55)",
+    swatch: ["#02100f", "#062033", "#7de8ff", "#d8fff4"],
+  },
+  sunset: {
+    name: "Retro Sunset",
+    pieces: { I: "#ff9f45", O: "#ffd166", T: "#ff5d8f", S: "#ffb703", Z: "#f94144", J: "#9b5de5", L: "#ff7b54" },
+    glow: "#ff6f91",
+    laneTop: "rgba(255,120,150,0.07)",
+    laneBottom: "rgba(255,190,80,0.09)",
+    frame: "rgba(255,140,110,0.55)",
+    swatch: ["#170617", "#3a0b3a", "#ff5d8f", "#ffd166"],
+  },
+};
 
 interface Settings {
   ghost: boolean;
@@ -34,6 +69,7 @@ interface Settings {
   swipeSensitivity: number; // px per cell
   handed: "right" | "left";
   difficulty: "easy" | "normal" | "hard";
+  theme: ThemeKey;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -44,6 +80,7 @@ const DEFAULT_SETTINGS: Settings = {
   swipeSensitivity: 24,
   handed: "right",
   difficulty: "normal",
+  theme: "space",
 };
 
 const HS_KEY = "neonstack:highscore";
