@@ -753,10 +753,14 @@ export default function NeonStack() {
     const ox = Math.floor((W - boardW) / 2);
     const oy = Math.floor((H - boardH) / 2);
 
-    // subtle vertical lane gradient — gives depth without a hard frame
+    const theme = THEMES[settingsRef.current.theme] ?? THEMES.space;
+
+    // playfield backdrop + vertical lane gradient
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(ox, oy, boardW, boardH);
     const grad = ctx.createLinearGradient(0, oy, 0, oy + boardH);
-    grad.addColorStop(0, "rgba(120, 200, 255, 0.04)");
-    grad.addColorStop(1, "rgba(180, 80, 220, 0.06)");
+    grad.addColorStop(0, theme.laneTop);
+    grad.addColorStop(1, theme.laneBottom);
     ctx.fillStyle = grad;
     ctx.fillRect(ox, oy, boardW, boardH);
 
@@ -775,6 +779,19 @@ export default function NeonStack() {
       ctx.lineTo(ox + boardW, oy + y * cell + 0.5);
       ctx.stroke();
     }
+
+    // crisp glowing playfield frame
+    ctx.save();
+    ctx.strokeStyle = theme.frame;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = theme.glow;
+    ctx.shadowBlur = 14;
+    ctx.strokeRect(ox - 1, oy - 1, boardW + 2, boardH + 2);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox + 2, oy + 2, boardW - 4, boardH - 4);
+    ctx.restore();
 
     // board cells
     const b = boardRef.current;
