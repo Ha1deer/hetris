@@ -88,6 +88,50 @@ const STATS_KEY = "neonstack:stats";
 const SET_KEY = "neonstack:settings";
 const TIPS_KEY = "neonstack:tipsSeen";
 const CTRL_PICKED_KEY = "neonstack:ctrlPicked";
+const ACH_KEY = "hetris:achievements";
+const DAILY_KEY = "hetris:daily";
+
+/** Unlockable achievements — checked after every run. */
+const ACHIEVEMENTS: { id: string; name: string; desc: string; test: (r: { score: number; lines: number; timeSec: number; level: number }, s: Stats) => boolean }[] = [
+  { id: "first", name: "Lift Off", desc: "Finish your first run", test: (_r, s) => s.gamesPlayed >= 1 },
+  { id: "l10", name: "Line Worker", desc: "Clear 10 lines in one run", test: (r) => r.lines >= 10 },
+  { id: "l40", name: "Stack Master", desc: "Clear 40 lines in one run", test: (r) => r.lines >= 40 },
+  { id: "s5k", name: "High Roller", desc: "Score 5,000 points", test: (r) => r.score >= 5000 },
+  { id: "s20k", name: "Cosmic Legend", desc: "Score 20,000 points", test: (r) => r.score >= 20000 },
+  { id: "lvl8", name: "Warp Speed", desc: "Reach level 8", test: (r) => r.level >= 8 },
+  { id: "t5", name: "Marathon", desc: "Survive 5 minutes", test: (r) => r.timeSec >= 300 },
+  { id: "g25", name: "Dedicated", desc: "Play 25 games", test: (_r, s) => s.gamesPlayed >= 25 },
+];
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+/** Deterministic daily goal from the date — same for the whole day. */
+function dailyGoal(): { lines: number; score: number } {
+  const d = todayKey();
+  let h = 0;
+  for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) >>> 0;
+  return { lines: 8 + (h % 13), score: 1500 + (h % 7) * 500 };
+}
+function loadDaily(): { date: string; done: boolean } {
+  if (typeof window === "undefined") return { date: todayKey(), done: false };
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (v.date === todayKey()) return v;
+    }
+  } catch {}
+  return { date: todayKey(), done: false };
+}
+function loadAchievements(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(ACH_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
 
 interface Stats {
   bestScore: number;
