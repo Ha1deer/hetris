@@ -930,8 +930,59 @@ export default function NeonStack() {
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-background text-foreground overflow-hidden">
-      {/* Background soundtrack — always on unless disabled in settings */}
-      <audio ref={musicRef} src={soundtrack.url} preload="auto" loop />
+      {/* Background playlist — always on unless disabled in settings */}
+      <audio
+        ref={musicRef}
+        src={TRACKS[0]}
+        preload="auto"
+        onEnded={() => {
+          const a = musicRef.current;
+          if (!a) return;
+          trackRef.current = (trackRef.current + 1) % TRACKS.length;
+          a.src = TRACKS[trackRef.current];
+          if (settingsRef.current.music) a.play().catch(() => {});
+        }}
+      />
+
+      {/* Loading screen — shown right after the intro */}
+      {phase === "loading" && (
+        <div className="fixed inset-0 z-[55] bg-black">
+          <img
+            src={loadingBg.url}
+            alt="HETRIS loading"
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/90" />
+          <div className="absolute inset-x-0 bottom-[14%] flex flex-col items-center px-10">
+            <h2
+              className="text-4xl font-black tracking-[0.35em]"
+              style={{
+                background: "linear-gradient(120deg, #ffd76a, #ffb43a, #ffe9a8, #ffb43a)",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "hetris-shine 4s linear infinite",
+              }}
+            >
+              HETRIS
+            </h2>
+            <div className="mt-6 w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-100"
+                style={{
+                  width: `${loadPct}%`,
+                  background: "linear-gradient(90deg, #ffb43a, #ffe9a8)",
+                  boxShadow: "0 0 16px rgba(255,180,60,0.8)",
+                }}
+              />
+            </div>
+            <p className="mt-3 text-[9px] tracking-[0.45em] text-white/50">
+              LOADING {Math.floor(loadPct)}%
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Intro splash — Developed by Haider */}
       {phase === "intro" && (
