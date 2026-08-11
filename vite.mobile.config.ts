@@ -22,6 +22,18 @@ export default defineConfig({
         __dirname,
         "mobile/assets-local/menu-bg.jpg.asset.json",
       ),
+      "@/assets/menu-bg-portrait.jpg.asset.json": path.resolve(
+        __dirname,
+        "mobile/assets-local/menu-bg-portrait.jpg.asset.json",
+      ),
+      "@/assets/loading-bg.jpg.asset.json": path.resolve(
+        __dirname,
+        "mobile/assets-local/loading-bg.jpg.asset.json",
+      ),
+      "@/assets/puzzle-piece.mp3.asset.json": path.resolve(
+        __dirname,
+        "mobile/assets-local/puzzle-piece.mp3.asset.json",
+      ),
       "@/assets/soundtrack.mp3.asset.json": path.resolve(
         __dirname,
         "mobile/assets-local/soundtrack.mp3.asset.json",
