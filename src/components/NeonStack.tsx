@@ -705,7 +705,7 @@ export default function NeonStack() {
       grid: cssVar("--border"),
       panel: cssVar("--card"),
     } as Record<string, string>;
-  }, []);
+  }, [settings.theme, mounted]);
 
   const drawCell = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, key: PieceKey, opts: { ghost?: boolean } = {}) => {
     const col = colors?.[key] || "#fff";
