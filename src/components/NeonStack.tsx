@@ -1630,18 +1630,20 @@ function Result({ label, value }: { label: string; value: number | string }) {
 }
 
 function SettingsPanel({
-  settings, setSettings, onClose, stats,
+  settings, setSettings, onClose, trackIdx, onSkipTrack,
 }: {
   settings: Settings;
   setSettings: (s: Settings) => void;
   onClose: () => void;
-  stats: Stats;
+  trackIdx: number;
+  onSkipTrack: () => void;
 }) {
+  const [tab, setTab] = useState<"game" | "controls" | "about">("game");
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-3xl border border-white/10 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        className="w-full max-w-md max-h-[86vh] overflow-y-auto rounded-3xl border border-white/10 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
         style={{
           background: "linear-gradient(180deg, rgba(20,30,60,0.92), rgba(8,12,30,0.96))",
           boxShadow: "0 20px 60px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
@@ -1652,6 +1654,23 @@ function SettingsPanel({
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70 hover:text-foreground">✕</button>
         </div>
 
+        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+          {(["game", "controls", "about"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`py-2 rounded-lg text-[10px] font-bold tracking-[0.25em] uppercase transition ${
+                tab === t ? "text-primary-foreground" : "text-foreground/55"
+              }`}
+              style={tab === t ? { background: "linear-gradient(120deg, var(--primary), var(--accent))" } : undefined}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === "game" && (
+        <>
         <div>
           <p className="text-sm mb-2">Gameplay theme</p>
           <div className="grid grid-cols-3 gap-2">
