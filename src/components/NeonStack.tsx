@@ -123,6 +123,7 @@ const CTRL_PICKED_KEY = "neonstack:ctrlPicked";
 const ACH_KEY = "hetris:achievements";
 /** Music playlist — loops through both tracks in sequence. */
 const TRACKS = [soundtrack.url, puzzlePiece.url];
+const TRACK_NAMES = ["Deep Space Theme", "Puzzle Piece"];
 const DAILY_KEY = "hetris:daily";
 
 /** Unlockable achievements — checked after every run. */
@@ -1847,7 +1848,7 @@ function TrophyIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose: () => void }) {
+function AchievementsPanel({ unlocked, stats, onClose }: { unlocked: string[]; stats: Stats; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-4" onClick={onClose}>
       <div
@@ -1859,11 +1860,35 @@ function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose:
         }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-black tracking-[0.35em] flex items-center gap-2"><TrophyIcon size={18} /> AWARDS</h3>
+          <h3 className="text-base font-black tracking-[0.35em] flex items-center gap-2"><TrophyIcon size={18} /> CAREER</h3>
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70">✕</button>
         </div>
-        <p className="text-[10px] tracking-[0.3em] text-foreground/50">
-          {unlocked.length} / {ACHIEVEMENTS.length} UNLOCKED
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { k: "Best score", v: String(stats.bestScore) },
+            { k: "Best lines", v: String(stats.bestLines) },
+            { k: "Best time", v: `${Math.floor(stats.bestTimeSec / 60)}:${String(stats.bestTimeSec % 60).padStart(2, "0")}` },
+            { k: "Games played", v: String(stats.gamesPlayed) },
+          ].map((s2) => (
+            <div key={s2.k} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <p className="text-[9px] tracking-[0.25em] text-foreground/45 uppercase">{s2.k}</p>
+              <p className="text-xl font-black tabular-nums" style={{ color: "var(--accent)" }}>{s2.v}</p>
+            </div>
+          ))}
+        </div>
+        {stats.top5 && stats.top5.length > 0 && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1">
+            <p className="text-[9px] tracking-[0.3em] text-foreground/45">TOP RUNS</p>
+            {stats.top5.slice(0, 5).map((sc, i) => (
+              <div key={i} className="flex justify-between text-xs">
+                <span className="text-foreground/50">#{i + 1}</span>
+                <span className="tabular-nums font-semibold">{sc}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-[10px] tracking-[0.3em] text-foreground/50 pt-1">
+          AWARDS · {unlocked.length} / {ACHIEVEMENTS.length} UNLOCKED
         </p>
         <div className="space-y-2">
           {ACHIEVEMENTS.map((a) => {
@@ -1904,52 +1929,6 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     <button onClick={() => onChange(!on)} className={`w-11 h-6 rounded-full transition ${on ? "bg-primary" : "bg-muted"} relative`}>
       <span className={`absolute top-0.5 ${on ? "left-5" : "left-0.5"} w-5 h-5 rounded-full bg-background transition-all`} />
     </button>
-  );
-}
-
-function AboutPanel({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-6"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold tracking-[0.3em]">ABOUT</h3>
-          <button onClick={onClose} className="text-muted-foreground">✕</button>
-        </div>
-        <h1
-          className="text-4xl font-black tracking-[0.3em]"
-          style={{
-            background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          HETRIS
-        </h1>
-        <p className="text-xs tracking-[0.25em] text-muted-foreground">
-          A FALLING BLOCK PUZZLE
-        </p>
-        <div className="pt-4 border-t border-border">
-          <p className="text-[10px] tracking-[0.4em] text-muted-foreground/70 mb-2">
-            DEVELOPED BY
-          </p>
-          <p
-            className="text-3xl font-bold tracking-[0.25em]"
-            style={{ color: "#f5c518", textShadow: "0 0 18px rgba(245,197,24,0.35)" }}
-          >
-            HAIDER
-          </p>
-        </div>
-        <p className="text-[10px] text-muted-foreground/60 pt-2">
-          Offline · Ad-free · Pure skill
-        </p>
-      </div>
-    </div>
   );
 }
 
