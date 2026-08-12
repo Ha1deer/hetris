@@ -1390,7 +1390,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome, settings, setSettings,
+  phase, stats, score, lines, time, onStart, onResume, onSettings, onHome, settings, setSettings,
   onAchievements, daily, unlockedCount,
 }: {
   phase: Phase;
@@ -1400,7 +1400,6 @@ function Overlay({
   time: number;
   onStart: () => void;
   onResume: () => void;
-  onAbout: () => void;
   onSettings: () => void;
   onHome: () => void;
   settings: Settings;
@@ -1432,149 +1431,89 @@ function Overlay({
         </>
       )}
       {phase === "menu" && (
-        <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
-          <div className="mb-10 text-center">
+        <div className="relative z-10 flex flex-col h-full w-full max-w-xs mx-auto animate-in fade-in duration-700">
+          {/* Title block — sits in the upper third, breathing room below */}
+          <div className="pt-[12vh] text-center">
             <h1
               className="text-6xl font-black tracking-[0.2em] leading-none"
               style={{
-                background:
-                  "linear-gradient(120deg, #ffd76a, #ffb43a, #ffe9a8, #ffb43a)",
+                background: "linear-gradient(120deg, var(--accent), var(--primary), var(--accent))",
                 backgroundSize: "200% 100%",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 animation: "hetris-shine 4s linear infinite",
-                filter: "drop-shadow(0 0 24px rgba(255,180,60,0.45))",
+                filter: "drop-shadow(0 0 24px var(--accent))",
               }}
             >
               HETRIS
             </h1>
-            <p className="mt-3 text-[10px] tracking-[0.5em] text-foreground/60">
-              BY HAIDER
-            </p>
+            <p className="mt-4 text-[10px] tracking-[0.5em] text-foreground/55">BY HAIDER</p>
           </div>
 
-          <div className="w-full mb-4">
-            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2 text-center">
-              DIFFICULTY
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {(["easy", "normal", "hard"] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setSettings({ ...settings, difficulty: d })}
-                  className={`py-2 rounded-xl text-[10px] font-bold tracking-[0.25em] border transition ${
-                    settings.difficulty === d
-                      ? "border-transparent text-primary-foreground"
-                      : "border-white/10 bg-white/[0.03] text-foreground/60"
-                  }`}
-                  style={
-                    settings.difficulty === d
-                      ? {
-                          background: "linear-gradient(120deg, var(--accent), var(--primary))",
-                          boxShadow: "0 6px 20px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,0.4)",
-                        }
-                      : undefined
-                  }
-                >
-                  {d.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="flex-1" />
 
-
-          <button
-            onClick={onStart}
-            className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden"
-            style={{
-              background:
-                "linear-gradient(120deg, #ffb43a, #ffd76a)",
-              boxShadow:
-                "0 10px 40px -10px rgba(255,180,60,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
-            }}
-          >
-            <span className="relative z-10 flex items-center justify-center gap-3">
-              <PlayIcon /> PLAY
-            </span>
-          </button>
-
-          <div className="mt-3 grid grid-cols-2 gap-2 w-full">
-            <button
-              onClick={onSettings}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
-            >
-              <GearIcon /> SETTINGS
-            </button>
-            <button
-              onClick={onAbout}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
-            >
-              <InfoIcon /> ABOUT
-            </button>
-          </div>
-
-          <button
-            onClick={onAchievements}
-            className="mt-2 w-full flex items-center justify-between px-4 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
-          >
-            <span className="flex items-center gap-2"><TrophyIcon /> AWARDS</span>
-            <span className="tabular-nums text-foreground/60">
-              {unlockedCount ?? 0}/{ACHIEVEMENTS.length}
-            </span>
-          </button>
-
-          {goal && (
-            <div
-              className="mt-4 w-full rounded-2xl border p-4 text-left backdrop-blur-md"
-              style={{
-                borderColor: daily?.done ? "var(--accent)" : "rgba(255,255,255,0.10)",
-                background: "rgba(0,0,0,0.35)",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[9px] tracking-[0.4em] text-foreground/50">DAILY CHALLENGE</p>
-                {daily?.done && (
-                  <span className="text-[9px] tracking-[0.3em] font-bold" style={{ color: "var(--accent)" }}>
-                    ★ DONE
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-xs text-foreground/85">
-                Clear <span className="font-bold">{goal.lines}</span> lines and score{" "}
-                <span className="font-bold">{goal.score}</span> in a single run.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-10 w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-4">
-            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">
-              PERSONAL BEST
-            </p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <BestStat label="SCORE" value={stats.bestScore} />
-              <BestStat label="LINES" value={stats.bestLines} />
-              <BestStat label="GAMES" value={stats.gamesPlayed} />
-            </div>
-            {stats.topScores && stats.topScores.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-white/10">
-                <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2">
-                  TOP 5
+          {/* Action stack — pushed to the lower half for thumb reach */}
+          <div className="w-full pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-2.5">
+            {goal && (
+              <div
+                className="w-full rounded-2xl border p-3.5 text-left backdrop-blur-md"
+                style={{
+                  borderColor: daily?.done ? "var(--accent)" : "rgba(255,255,255,0.10)",
+                  background: "rgba(0,0,0,0.38)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] tracking-[0.4em] text-foreground/50">DAILY CHALLENGE</p>
+                  {daily?.done && (
+                    <span className="text-[9px] tracking-[0.3em] font-bold" style={{ color: "var(--accent)" }}>
+                      ★ DONE
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-foreground/85">
+                  Clear <span className="font-bold">{goal.lines}</span> lines and score{" "}
+                  <span className="font-bold">{goal.score}</span> in one run.
                 </p>
-                <ol className="space-y-1">
-                  {stats.topScores.slice(0, 5).map((sc, i) => (
-                    <li key={i} className="flex justify-between text-[11px] tabular-nums">
-                      <span className="text-foreground/50">#{i + 1}</span>
-                      <span
-                        className="font-bold"
-                        style={i === 0 ? { color: "var(--accent)" } : undefined}
-                      >
-                        {sc}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
               </div>
             )}
+
+            <button
+              onClick={onStart}
+              className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden active:scale-95 transition"
+              style={{
+                background: "linear-gradient(120deg, var(--primary), var(--accent))",
+                boxShadow: "0 12px 40px -10px var(--accent), inset 0 1px 0 rgba(255,255,255,0.4)",
+              }}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <PlayIcon /> PLAY
+              </span>
+            </button>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={onAchievements}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-white/10 bg-white/[0.05] text-foreground/85 backdrop-blur-md active:scale-95 transition"
+              >
+                <span className="flex items-center gap-2 text-[11px] tracking-[0.25em]">
+                  <TrophyIcon /> CAREER
+                </span>
+                <span className="text-[9px] tabular-nums text-foreground/50">
+                  {stats.bestScore} BEST · {unlockedCount ?? 0}/{ACHIEVEMENTS.length}
+                </span>
+              </button>
+              <button
+                onClick={onSettings}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-white/10 bg-white/[0.05] text-foreground/85 backdrop-blur-md active:scale-95 transition"
+              >
+                <span className="flex items-center gap-2 text-[11px] tracking-[0.25em]">
+                  <GearIcon /> SETTINGS
+                </span>
+                <span className="text-[9px] tracking-[0.2em] text-foreground/50 uppercase">
+                  {settings.difficulty}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}
