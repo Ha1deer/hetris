@@ -371,6 +371,7 @@ export default function NeonStack() {
 
   /** PLAY → short loading screen → game. */
   const beginPlay = useCallback(() => setPhase("gameLoading"), []);
+  const startGameRef = useRef<(() => void) | null>(null);
 
   // Pre-game loading screen — fills, then starts the run.
   useEffect(() => {
