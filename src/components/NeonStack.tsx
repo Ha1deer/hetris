@@ -4,6 +4,7 @@ import soundtrack from "@/assets/soundtrack.mp3.asset.json";
 import puzzlePiece from "@/assets/puzzle-piece.mp3.asset.json";
 import menuBg from "@/assets/menu-bg-portrait.jpg.asset.json";
 import loadingBg from "@/assets/loading-bg.jpg.asset.json";
+import playLoadingBg from "@/assets/play-loading.jpg";
 import {
   Bag,
   Board,
@@ -27,11 +28,21 @@ import {
 } from "@/lib/tetris";
 
 type ControlMode = "buttons" | "swipe" | "both";
-type Phase = "intro" | "loading" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
+type Phase = "intro" | "loading" | "pickControls" | "menu" | "gameLoading" | "playing" | "paused" | "over" | "about";
 export type ThemeKey = "space" | "aurora" | "sunset";
 
 /** Gameplay themes — each one repaints the board, pieces and glow. */
-const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>; glow: string; laneTop: string; laneBottom: string; frame: string; swatch: string[] }> = {
+const THEMES: Record<ThemeKey, {
+  name: string;
+  pieces: Record<PieceKey, string>;
+  glow: string;
+  laneTop: string;
+  laneBottom: string;
+  frame: string;
+  swatch: string[];
+  /** UI chrome — repaints the whole app, not just the board. */
+  ui: { background: string; card: string; accent: string; primary: string; secondary: string; muted: string; border: string; foreground: string; primaryFg: string };
+}> = {
   space: {
     name: "Space",
     pieces: { I: "#57c7ff", O: "#ffd76a", T: "#e07bff", S: "#6ef2a6", Z: "#ff6a5e", J: "#7f8cff", L: "#ffa845" },
@@ -40,6 +51,13 @@ const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>;
     laneBottom: "rgba(255,180,60,0.08)",
     frame: "rgba(255,196,80,0.55)",
     swatch: ["#03060f", "#0a1330", "#f0b429", "#ffe6a7"],
+    ui: {
+      background: "oklch(0.10 0.04 250)", card: "oklch(0.14 0.05 250)",
+      accent: "oklch(0.88 0.18 95)", primary: "oklch(0.85 0.17 85)",
+      secondary: "oklch(0.30 0.08 250)", muted: "oklch(0.22 0.05 250)",
+      border: "oklch(0.30 0.06 250)", foreground: "oklch(0.97 0.02 90)",
+      primaryFg: "oklch(0.12 0.04 250)",
+    },
   },
   aurora: {
     name: "Aurora Ice",
@@ -49,6 +67,13 @@ const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>;
     laneBottom: "rgba(90,140,255,0.09)",
     frame: "rgba(150,240,255,0.55)",
     swatch: ["#02100f", "#062033", "#7de8ff", "#d8fff4"],
+    ui: {
+      background: "oklch(0.11 0.04 220)", card: "oklch(0.16 0.05 215)",
+      accent: "oklch(0.90 0.13 200)", primary: "oklch(0.86 0.14 195)",
+      secondary: "oklch(0.30 0.07 215)", muted: "oklch(0.22 0.05 215)",
+      border: "oklch(0.32 0.06 210)", foreground: "oklch(0.97 0.02 200)",
+      primaryFg: "oklch(0.13 0.04 220)",
+    },
   },
   sunset: {
     name: "Retro Sunset",
@@ -58,6 +83,13 @@ const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>;
     laneBottom: "rgba(255,190,80,0.09)",
     frame: "rgba(255,140,110,0.55)",
     swatch: ["#170617", "#3a0b3a", "#ff5d8f", "#ffd166"],
+    ui: {
+      background: "oklch(0.12 0.06 330)", card: "oklch(0.18 0.08 325)",
+      accent: "oklch(0.75 0.20 10)", primary: "oklch(0.80 0.16 45)",
+      secondary: "oklch(0.32 0.10 320)", muted: "oklch(0.24 0.08 325)",
+      border: "oklch(0.36 0.10 330)", foreground: "oklch(0.97 0.02 40)",
+      primaryFg: "oklch(0.15 0.06 330)",
+    },
   },
 };
 
@@ -91,6 +123,7 @@ const CTRL_PICKED_KEY = "neonstack:ctrlPicked";
 const ACH_KEY = "hetris:achievements";
 /** Music playlist — loops through both tracks in sequence. */
 const TRACKS = [soundtrack.url, puzzlePiece.url];
+const TRACK_NAMES = ["Deep Space Theme", "Puzzle Piece"];
 const DAILY_KEY = "hetris:daily";
 
 /** Unlockable achievements — checked after every run. */
@@ -196,7 +229,7 @@ export default function NeonStack() {
   // localStorage after mount.
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<Stats>({ bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [, setMounted] = useState(false);
   const [unlocked, setUnlocked] = useState<string[]>([]);
   const [daily, setDaily] = useState<{ date: string; done: boolean }>({ date: "", done: false });
   useEffect(() => {
@@ -207,12 +240,13 @@ export default function NeonStack() {
     setMounted(true);
   }, []);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
   const [showTips, setShowTips] = useState(false);
   const [showAch, setShowAch] = useState(false);
   const [loadPct, setLoadPct] = useState(0);
+  const [playPct, setPlayPct] = useState(0);
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const trackRef = useRef(0);
+  const [trackIdx, setTrackIdx] = useState(0);
 
   // Apply the selected gameplay theme as CSS variables on :root so both the
   // canvas (via cssVar) and the DOM chrome repaint together.
@@ -227,6 +261,19 @@ export default function NeonStack() {
     root.style.setProperty("--lane-top", t.laneTop);
     root.style.setProperty("--lane-bottom", t.laneBottom);
     root.style.setProperty("--board-frame", t.frame);
+    // UI chrome tokens — makes the theme repaint the whole app.
+    root.style.setProperty("--background", t.ui.background);
+    root.style.setProperty("--card", t.ui.card);
+    root.style.setProperty("--popover", t.ui.card);
+    root.style.setProperty("--accent", t.ui.accent);
+    root.style.setProperty("--primary", t.ui.primary);
+    root.style.setProperty("--primary-foreground", t.ui.primaryFg);
+    root.style.setProperty("--accent-foreground", t.ui.primaryFg);
+    root.style.setProperty("--secondary", t.ui.secondary);
+    root.style.setProperty("--muted", t.ui.muted);
+    root.style.setProperty("--border", t.ui.border);
+    root.style.setProperty("--ring", t.ui.primary);
+    root.style.setProperty("--foreground", t.ui.foreground);
   }, [settings.theme]);
 
   // Auto-dismiss intro after 2s (no tap-to-skip) → loading screen
@@ -323,6 +370,38 @@ export default function NeonStack() {
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
+  /** PLAY → short loading screen → game. */
+  const beginPlay = useCallback(() => setPhase("gameLoading"), []);
+  const startGameRef = useRef<(() => void) | null>(null);
+
+  // Pre-game loading screen — fills, then starts the run.
+  useEffect(() => {
+    if (phase !== "gameLoading") return;
+    setPlayPct(0);
+    const started = performance.now();
+    const DUR = 1400;
+    let raf = 0;
+    const step = () => {
+      const pct = Math.min(100, ((performance.now() - started) / DUR) * 100);
+      setPlayPct(pct);
+      if (pct < 100) raf = requestAnimationFrame(step);
+      else startGameRef.current?.();
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
+  /** Jump to the next track in the playlist. */
+  const skipTrack = useCallback(() => {
+    const a = musicRef.current;
+    trackRef.current = (trackRef.current + 1) % TRACKS.length;
+    setTrackIdx(trackRef.current);
+    if (a) {
+      a.src = TRACKS[trackRef.current];
+      if (settingsRef.current.music) a.play().catch(() => {});
+    }
+  }, []);
+
   // Canvas
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -355,6 +434,8 @@ export default function NeonStack() {
       }
     } catch {}
   }, []);
+
+  useEffect(() => { startGameRef.current = startGame; }, [startGame]);
 
   const spawnNext = useCallback(() => {
     const key = bagRef.current.next();
@@ -710,20 +791,11 @@ export default function NeonStack() {
   }, []);
 
   const colors = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    return {
-      I: cssVar("--piece-i"),
-      O: cssVar("--piece-o"),
-      T: cssVar("--piece-t"),
-      S: cssVar("--piece-s"),
-      Z: cssVar("--piece-z"),
-      J: cssVar("--piece-j"),
-      L: cssVar("--piece-l"),
-      bg: cssVar("--background"),
-      grid: cssVar("--border"),
-      panel: cssVar("--card"),
-    } as Record<string, string>;
-  }, [settings.theme, mounted]);
+    // Read straight from the theme table (not computed CSS vars) so a theme
+    // switch repaints the canvas on the very same render.
+    const t = THEMES[settings.theme] ?? THEMES.space;
+    return { ...t.pieces } as Record<string, string>;
+  }, [settings.theme]);
 
   const drawCell = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, key: PieceKey, opts: { ghost?: boolean } = {}) => {
     const col = colors?.[key] || "#fff";
@@ -1096,16 +1168,15 @@ export default function NeonStack() {
           </div>
         )}
 
-        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "loading" && phase !== "menu" && (
+        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "loading" && phase !== "gameLoading" && phase !== "menu" && (
           <Overlay
             phase={phase}
             stats={stats}
             score={score}
             lines={lines}
             time={elapsed}
-            onStart={startGame}
+            onStart={beginPlay}
             onResume={() => setPhase("playing")}
-            onAbout={() => setShowAbout(true)}
             onSettings={() => setShowSettings(true)}
             onHome={() => setPhase("menu")}
             settings={settings}
@@ -1128,9 +1199,8 @@ export default function NeonStack() {
           score={score}
           lines={lines}
           time={elapsed}
-          onStart={startGame}
+          onStart={beginPlay}
           onResume={() => setPhase("playing")}
-          onAbout={() => setShowAbout(true)}
           onSettings={() => setShowSettings(true)}
           onHome={() => setPhase("menu")}
           settings={settings}
@@ -1141,8 +1211,50 @@ export default function NeonStack() {
         />
       )}
 
+      {/* Play loading screen — after tapping PLAY */}
+      {phase === "gameLoading" && (
+        <div className="fixed inset-0 z-[52] bg-black">
+          <img
+            src={playLoadingBg}
+            alt=""
+            aria-hidden
+            width={768}
+            height={1408}
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/90" />
+          <div className="absolute inset-x-0 bottom-[16%] flex flex-col items-center px-10">
+            <p className="text-[9px] tracking-[0.5em] text-foreground/60 mb-2">GET READY</p>
+            <h2
+              className="text-3xl font-black tracking-[0.35em]"
+              style={{
+                background: "linear-gradient(120deg, var(--accent), var(--primary), var(--accent))",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "hetris-shine 3s linear infinite",
+              }}
+            >
+              HETRIS
+            </h2>
+            <div className="mt-5 w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-100"
+                style={{
+                  width: `${playPct}%`,
+                  background: "linear-gradient(90deg, var(--primary), var(--accent))",
+                  boxShadow: "0 0 16px var(--accent)",
+                }}
+              />
+            </div>
+            <p className="mt-3 text-[9px] tracking-[0.45em] text-white/50">{Math.floor(playPct)}%</p>
+          </div>
+        </div>
+      )}
+
       {/* Control buttons — hidden in menu */}
-      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" &&
+      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "gameLoading" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
         <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
           <div className={`grid grid-cols-2 gap-3 items-center ${settings.handed === "left" ? "[direction:rtl]" : ""}`}>
@@ -1170,9 +1282,16 @@ export default function NeonStack() {
         </div>
       )}
 
-      {showSettings && <SettingsPanel settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} stats={stats} />}
-      {showAbout && <AboutPanel onClose={() => setShowAbout(false)} />}
-      {showAch && <AchievementsPanel unlocked={unlocked} onClose={() => setShowAch(false)} />}
+      {showSettings && (
+        <SettingsPanel
+          settings={settings}
+          setSettings={setSettings}
+          onClose={() => setShowSettings(false)}
+          trackIdx={trackIdx}
+          onSkipTrack={skipTrack}
+        />
+      )}
+      {showAch && <AchievementsPanel unlocked={unlocked} stats={stats} onClose={() => setShowAch(false)} />}
     </div>
   );
 }
@@ -1272,7 +1391,7 @@ function CtrlBtn({
 }
 
 function Overlay({
-  phase, stats, score, lines, time, onStart, onResume, onAbout, onSettings, onHome, settings, setSettings,
+  phase, stats, score, lines, time, onStart, onResume, onSettings, onHome, settings, setSettings,
   onAchievements, daily, unlockedCount,
 }: {
   phase: Phase;
@@ -1282,7 +1401,6 @@ function Overlay({
   time: number;
   onStart: () => void;
   onResume: () => void;
-  onAbout: () => void;
   onSettings: () => void;
   onHome: () => void;
   settings: Settings;
@@ -1314,149 +1432,89 @@ function Overlay({
         </>
       )}
       {phase === "menu" && (
-        <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700 w-full max-w-xs py-8">
-          <div className="mb-10 text-center">
+        <div className="relative z-10 flex flex-col h-full w-full max-w-xs mx-auto animate-in fade-in duration-700">
+          {/* Title block — sits in the upper third, breathing room below */}
+          <div className="pt-[12vh] text-center">
             <h1
               className="text-6xl font-black tracking-[0.2em] leading-none"
               style={{
-                background:
-                  "linear-gradient(120deg, #ffd76a, #ffb43a, #ffe9a8, #ffb43a)",
+                background: "linear-gradient(120deg, var(--accent), var(--primary), var(--accent))",
                 backgroundSize: "200% 100%",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 animation: "hetris-shine 4s linear infinite",
-                filter: "drop-shadow(0 0 24px rgba(255,180,60,0.45))",
+                filter: "drop-shadow(0 0 24px var(--accent))",
               }}
             >
               HETRIS
             </h1>
-            <p className="mt-3 text-[10px] tracking-[0.5em] text-foreground/60">
-              BY HAIDER
-            </p>
+            <p className="mt-4 text-[10px] tracking-[0.5em] text-foreground/55">BY HAIDER</p>
           </div>
 
-          <div className="w-full mb-4">
-            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2 text-center">
-              DIFFICULTY
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {(["easy", "normal", "hard"] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setSettings({ ...settings, difficulty: d })}
-                  className={`py-2 rounded-xl text-[10px] font-bold tracking-[0.25em] border transition ${
-                    settings.difficulty === d
-                      ? "border-transparent text-primary-foreground"
-                      : "border-white/10 bg-white/[0.03] text-foreground/60"
-                  }`}
-                  style={
-                    settings.difficulty === d
-                      ? {
-                          background: "linear-gradient(120deg, var(--accent), var(--primary))",
-                          boxShadow: "0 6px 20px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,0.4)",
-                        }
-                      : undefined
-                  }
-                >
-                  {d.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="flex-1" />
 
-
-          <button
-            onClick={onStart}
-            className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden"
-            style={{
-              background:
-                "linear-gradient(120deg, #ffb43a, #ffd76a)",
-              boxShadow:
-                "0 10px 40px -10px rgba(255,180,60,0.6), inset 0 1px 0 rgba(255,255,255,0.4)",
-            }}
-          >
-            <span className="relative z-10 flex items-center justify-center gap-3">
-              <PlayIcon /> PLAY
-            </span>
-          </button>
-
-          <div className="mt-3 grid grid-cols-2 gap-2 w-full">
-            <button
-              onClick={onSettings}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
-            >
-              <GearIcon /> SETTINGS
-            </button>
-            <button
-              onClick={onAbout}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
-            >
-              <InfoIcon /> ABOUT
-            </button>
-          </div>
-
-          <button
-            onClick={onAchievements}
-            className="mt-2 w-full flex items-center justify-between px-4 py-3 rounded-xl border border-white/10 bg-white/[0.04] text-foreground/80 text-xs tracking-[0.25em] backdrop-blur-md active:scale-95 transition"
-          >
-            <span className="flex items-center gap-2"><TrophyIcon /> AWARDS</span>
-            <span className="tabular-nums text-foreground/60">
-              {unlockedCount ?? 0}/{ACHIEVEMENTS.length}
-            </span>
-          </button>
-
-          {goal && (
-            <div
-              className="mt-4 w-full rounded-2xl border p-4 text-left backdrop-blur-md"
-              style={{
-                borderColor: daily?.done ? "var(--accent)" : "rgba(255,255,255,0.10)",
-                background: "rgba(0,0,0,0.35)",
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[9px] tracking-[0.4em] text-foreground/50">DAILY CHALLENGE</p>
-                {daily?.done && (
-                  <span className="text-[9px] tracking-[0.3em] font-bold" style={{ color: "var(--accent)" }}>
-                    ★ DONE
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-xs text-foreground/85">
-                Clear <span className="font-bold">{goal.lines}</span> lines and score{" "}
-                <span className="font-bold">{goal.score}</span> in a single run.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-10 w-full rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-4">
-            <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">
-              PERSONAL BEST
-            </p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <BestStat label="SCORE" value={stats.bestScore} />
-              <BestStat label="LINES" value={stats.bestLines} />
-              <BestStat label="GAMES" value={stats.gamesPlayed} />
-            </div>
-            {stats.topScores && stats.topScores.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-white/10">
-                <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-2">
-                  TOP 5
+          {/* Action stack — pushed to the lower half for thumb reach */}
+          <div className="w-full pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-2.5">
+            {goal && (
+              <div
+                className="w-full rounded-2xl border p-3.5 text-left backdrop-blur-md"
+                style={{
+                  borderColor: daily?.done ? "var(--accent)" : "rgba(255,255,255,0.10)",
+                  background: "rgba(0,0,0,0.38)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] tracking-[0.4em] text-foreground/50">DAILY CHALLENGE</p>
+                  {daily?.done && (
+                    <span className="text-[9px] tracking-[0.3em] font-bold" style={{ color: "var(--accent)" }}>
+                      ★ DONE
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-foreground/85">
+                  Clear <span className="font-bold">{goal.lines}</span> lines and score{" "}
+                  <span className="font-bold">{goal.score}</span> in one run.
                 </p>
-                <ol className="space-y-1">
-                  {stats.topScores.slice(0, 5).map((sc, i) => (
-                    <li key={i} className="flex justify-between text-[11px] tabular-nums">
-                      <span className="text-foreground/50">#{i + 1}</span>
-                      <span
-                        className="font-bold"
-                        style={i === 0 ? { color: "var(--accent)" } : undefined}
-                      >
-                        {sc}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
               </div>
             )}
+
+            <button
+              onClick={onStart}
+              className="group relative w-full px-8 py-4 rounded-2xl font-bold tracking-[0.3em] text-primary-foreground overflow-hidden active:scale-95 transition"
+              style={{
+                background: "linear-gradient(120deg, var(--primary), var(--accent))",
+                boxShadow: "0 12px 40px -10px var(--accent), inset 0 1px 0 rgba(255,255,255,0.4)",
+              }}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <PlayIcon /> PLAY
+              </span>
+            </button>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={onAchievements}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-white/10 bg-white/[0.05] text-foreground/85 backdrop-blur-md active:scale-95 transition"
+              >
+                <span className="flex items-center gap-2 text-[11px] tracking-[0.25em]">
+                  <TrophyIcon /> CAREER
+                </span>
+                <span className="text-[9px] tabular-nums text-foreground/50">
+                  {stats.bestScore} BEST · {unlockedCount ?? 0}/{ACHIEVEMENTS.length}
+                </span>
+              </button>
+              <button
+                onClick={onSettings}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-white/10 bg-white/[0.05] text-foreground/85 backdrop-blur-md active:scale-95 transition"
+              >
+                <span className="flex items-center gap-2 text-[11px] tracking-[0.25em]">
+                  <GearIcon /> SETTINGS
+                </span>
+                <span className="text-[9px] tracking-[0.2em] text-foreground/50 uppercase">
+                  {settings.difficulty}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1573,18 +1631,20 @@ function Result({ label, value }: { label: string; value: number | string }) {
 }
 
 function SettingsPanel({
-  settings, setSettings, onClose, stats,
+  settings, setSettings, onClose, trackIdx, onSkipTrack,
 }: {
   settings: Settings;
   setSettings: (s: Settings) => void;
   onClose: () => void;
-  stats: Stats;
+  trackIdx: number;
+  onSkipTrack: () => void;
 }) {
+  const [tab, setTab] = useState<"game" | "controls" | "about">("game");
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-3xl border border-white/10 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        className="w-full max-w-md max-h-[86vh] overflow-y-auto rounded-3xl border border-white/10 p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
         style={{
           background: "linear-gradient(180deg, rgba(20,30,60,0.92), rgba(8,12,30,0.96))",
           boxShadow: "0 20px 60px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
@@ -1595,6 +1655,23 @@ function SettingsPanel({
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70 hover:text-foreground">✕</button>
         </div>
 
+        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+          {(["game", "controls", "about"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`py-2 rounded-lg text-[10px] font-bold tracking-[0.25em] uppercase transition ${
+                tab === t ? "text-primary-foreground" : "text-foreground/55"
+              }`}
+              style={tab === t ? { background: "linear-gradient(120deg, var(--primary), var(--accent))" } : undefined}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === "game" && (
+        <>
         <div>
           <p className="text-sm mb-2">Gameplay theme</p>
           <div className="grid grid-cols-3 gap-2">
@@ -1630,30 +1707,66 @@ function SettingsPanel({
           </div>
         </div>
 
+
         <Row label="Ghost piece">
           <Toggle on={settings.ghost} onChange={(v) => setSettings({ ...settings, ghost: v })} />
         </Row>
-        <Row label="Sound">
+        <Row label="Sound effects">
           <Toggle on={settings.sound} onChange={(v) => setSettings({ ...settings, sound: v })} />
-        </Row>
-        <Row label="Music">
-          <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
         </Row>
         <Row label="Difficulty">
           <div className="flex gap-1">
             {(["easy", "normal", "hard"] as const).map((d) => (
               <button key={d} onClick={() => setSettings({ ...settings, difficulty: d })}
-                className={`px-2 py-1 text-xs rounded-md border capitalize ${settings.difficulty === d ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                className={`px-2.5 py-1.5 text-[11px] rounded-lg border capitalize transition ${settings.difficulty === d ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {d}
               </button>
             ))}
           </div>
         </Row>
-        <Row label="Controls">
+
+        {/* Music player */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[9px] tracking-[0.4em] text-foreground/50">MUSIC PLAYER</p>
+            <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{TRACK_NAMES[trackIdx] ?? "Track"}</p>
+              <p className="text-[10px] text-foreground/45">
+                {settings.music ? "Playing" : "Muted"} · Track {trackIdx + 1}/{TRACKS.length}
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => setSettings({ ...settings, music: !settings.music })}
+                aria-label={settings.music ? "Pause music" : "Play music"}
+                className="w-10 h-10 grid place-items-center rounded-xl border border-white/10 bg-white/[0.05] text-foreground/85 active:scale-90 transition"
+              >
+                {settings.music ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+              </button>
+              <button
+                onClick={onSkipTrack}
+                aria-label="Skip track"
+                className="w-10 h-10 grid place-items-center rounded-xl text-primary-foreground active:scale-90 transition"
+                style={{ background: "linear-gradient(120deg, var(--primary), var(--accent))" }}
+              >
+                <SkipIcon size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
+        )}
+
+        {tab === "controls" && (
+        <>
+        <Row label="Control mode">
           <div className="flex gap-1">
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
               <button key={m} onClick={() => setSettings({ ...settings, control: m })}
-                className={`px-2 py-1 text-xs rounded-md border ${settings.control === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                className={`px-2.5 py-1.5 text-[11px] rounded-lg border capitalize transition ${settings.control === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {m}
               </button>
             ))}
@@ -1663,7 +1776,7 @@ function SettingsPanel({
           <div className="flex gap-1">
             {(["right", "left"] as const).map((m) => (
               <button key={m} onClick={() => setSettings({ ...settings, handed: m })}
-                className={`px-3 py-1 text-xs rounded-md border capitalize ${settings.handed === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                className={`px-3 py-1.5 text-[11px] rounded-lg border capitalize transition ${settings.handed === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {m}
               </button>
             ))}
@@ -1672,15 +1785,45 @@ function SettingsPanel({
         <Row label={`Swipe sensitivity (${settings.swipeSensitivity}px)`}>
           <input type="range" min={12} max={48} step={2} value={settings.swipeSensitivity}
             onChange={(e) => setSettings({ ...settings, swipeSensitivity: Number(e.target.value) })}
-            className="w-32 accent-primary" />
+            className="w-28 accent-primary" />
         </Row>
 
-        <div className="pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
-          <div className="flex justify-between"><span>Best score</span><span className="text-foreground tabular-nums">{stats.bestScore}</span></div>
-          <div className="flex justify-between"><span>Best lines</span><span className="text-foreground tabular-nums">{stats.bestLines}</span></div>
-          <div className="flex justify-between"><span>Best time</span><span className="text-foreground tabular-nums">{Math.floor(stats.bestTimeSec / 60)}:{String(stats.bestTimeSec % 60).padStart(2, "0")}</span></div>
-          <div className="flex justify-between"><span>Games played</span><span className="text-foreground tabular-nums">{stats.gamesPlayed}</span></div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+          <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">TOUCH TIPS</p>
+          <ul className="space-y-2.5 text-left text-xs">
+            <Tip icon={<ChevronIcon dir="left" />}><b>Swipe left / right</b> — move piece</Tip>
+            <Tip icon={<RotateIcon />}><b>Tap</b> — rotate piece</Tip>
+            <Tip icon={<SoftDropIcon />}><b>Swipe down</b> — soft drop</Tip>
+            <Tip icon={<DropIcon />}><b>Fast swipe down</b> — hard drop</Tip>
+            <Tip icon={<SwapIcon />}><b>Buttons</b> — D-pad moves, centre rotates, big key hard-drops</Tip>
+          </ul>
         </div>
+        </>
+        )}
+
+        {tab === "about" && (
+        <div className="text-center space-y-4 py-2">
+          <h1
+            className="text-4xl font-black tracking-[0.3em]"
+            style={{
+              background: "linear-gradient(120deg, var(--primary), var(--accent))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            HETRIS
+          </h1>
+          <p className="text-[10px] tracking-[0.3em] text-muted-foreground">A FALLING BLOCK PUZZLE</p>
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-[10px] tracking-[0.4em] text-muted-foreground/70 mb-2">DEVELOPED BY</p>
+            <p className="text-3xl font-bold tracking-[0.25em]" style={{ color: "var(--accent)", textShadow: "0 0 18px var(--accent)" }}>
+              HAIDER
+            </p>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60">Offline · Ad-free · Pure skill</p>
+        </div>
+        )}
+
       </div>
     </div>
   );
@@ -1705,7 +1848,7 @@ function TrophyIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose: () => void }) {
+function AchievementsPanel({ unlocked, stats, onClose }: { unlocked: string[]; stats: Stats; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-4" onClick={onClose}>
       <div
@@ -1717,11 +1860,35 @@ function AchievementsPanel({ unlocked, onClose }: { unlocked: string[]; onClose:
         }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-black tracking-[0.35em] flex items-center gap-2"><TrophyIcon size={18} /> AWARDS</h3>
+          <h3 className="text-base font-black tracking-[0.35em] flex items-center gap-2"><TrophyIcon size={18} /> CAREER</h3>
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg border border-white/10 text-foreground/70">✕</button>
         </div>
-        <p className="text-[10px] tracking-[0.3em] text-foreground/50">
-          {unlocked.length} / {ACHIEVEMENTS.length} UNLOCKED
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { k: "Best score", v: String(stats.bestScore) },
+            { k: "Best lines", v: String(stats.bestLines) },
+            { k: "Best time", v: `${Math.floor(stats.bestTimeSec / 60)}:${String(stats.bestTimeSec % 60).padStart(2, "0")}` },
+            { k: "Games played", v: String(stats.gamesPlayed) },
+          ].map((s2) => (
+            <div key={s2.k} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <p className="text-[9px] tracking-[0.25em] text-foreground/45 uppercase">{s2.k}</p>
+              <p className="text-xl font-black tabular-nums" style={{ color: "var(--accent)" }}>{s2.v}</p>
+            </div>
+          ))}
+        </div>
+        {stats.topScores && stats.topScores.length > 0 && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1">
+            <p className="text-[9px] tracking-[0.3em] text-foreground/45">TOP RUNS</p>
+            {stats.topScores.slice(0, 5).map((sc, i) => (
+              <div key={i} className="flex justify-between text-xs">
+                <span className="text-foreground/50">#{i + 1}</span>
+                <span className="tabular-nums font-semibold">{sc}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-[10px] tracking-[0.3em] text-foreground/50 pt-1">
+          AWARDS · {unlocked.length} / {ACHIEVEMENTS.length} UNLOCKED
         </p>
         <div className="space-y-2">
           {ACHIEVEMENTS.map((a) => {
@@ -1762,52 +1929,6 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     <button onClick={() => onChange(!on)} className={`w-11 h-6 rounded-full transition ${on ? "bg-primary" : "bg-muted"} relative`}>
       <span className={`absolute top-0.5 ${on ? "left-5" : "left-0.5"} w-5 h-5 rounded-full bg-background transition-all`} />
     </button>
-  );
-}
-
-function AboutPanel({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-6"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold tracking-[0.3em]">ABOUT</h3>
-          <button onClick={onClose} className="text-muted-foreground">✕</button>
-        </div>
-        <h1
-          className="text-4xl font-black tracking-[0.3em]"
-          style={{
-            background: "linear-gradient(90deg, var(--piece-i), var(--accent))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          HETRIS
-        </h1>
-        <p className="text-xs tracking-[0.25em] text-muted-foreground">
-          A FALLING BLOCK PUZZLE
-        </p>
-        <div className="pt-4 border-t border-border">
-          <p className="text-[10px] tracking-[0.4em] text-muted-foreground/70 mb-2">
-            DEVELOPED BY
-          </p>
-          <p
-            className="text-3xl font-bold tracking-[0.25em]"
-            style={{ color: "#f5c518", textShadow: "0 0 18px rgba(245,197,24,0.35)" }}
-          >
-            HAIDER
-          </p>
-        </div>
-        <p className="text-[10px] text-muted-foreground/60 pt-2">
-          Offline · Ad-free · Pure skill
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -2010,6 +2131,12 @@ const SwapIcon = ({ size }: { size?: number }) => (
   <Svg size={size ?? 18}>
     <path d="M7 7h11l-3-3" />
     <path d="M17 17H6l3 3" />
+  </Svg>
+);
+const SkipIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 18}>
+    <path d="M5 4l10 8-10 8V4z" fill="currentColor" stroke="none" />
+    <rect x="17" y="4" width="2.5" height="16" rx="1" fill="currentColor" stroke="none" />
   </Svg>
 );
 
