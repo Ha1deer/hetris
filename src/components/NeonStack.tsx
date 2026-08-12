@@ -4,6 +4,7 @@ import soundtrack from "@/assets/soundtrack.mp3.asset.json";
 import puzzlePiece from "@/assets/puzzle-piece.mp3.asset.json";
 import menuBg from "@/assets/menu-bg-portrait.jpg.asset.json";
 import loadingBg from "@/assets/loading-bg.jpg.asset.json";
+import playLoadingBg from "@/assets/play-loading.jpg";
 import {
   Bag,
   Board,
