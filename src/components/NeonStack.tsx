@@ -369,6 +369,20 @@ export default function NeonStack() {
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
+  /** PLAY → short loading screen → game. */
+  const beginPlay = useCallback(() => setPhase("gameLoading"), []);
+
+  /** Jump to the next track in the playlist. */
+  const skipTrack = useCallback(() => {
+    const a = musicRef.current;
+    trackRef.current = (trackRef.current + 1) % TRACKS.length;
+    setTrackIdx(trackRef.current);
+    if (a) {
+      a.src = TRACKS[trackRef.current];
+      if (settingsRef.current.music) a.play().catch(() => {});
+    }
+  }, []);
+
   // Canvas
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
