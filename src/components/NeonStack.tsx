@@ -372,6 +372,23 @@ export default function NeonStack() {
   /** PLAY → short loading screen → game. */
   const beginPlay = useCallback(() => setPhase("gameLoading"), []);
 
+  // Pre-game loading screen — fills, then starts the run.
+  useEffect(() => {
+    if (phase !== "gameLoading") return;
+    setPlayPct(0);
+    const started = performance.now();
+    const DUR = 1400;
+    let raf = 0;
+    const step = () => {
+      const pct = Math.min(100, ((performance.now() - started) / DUR) * 100);
+      setPlayPct(pct);
+      if (pct < 100) raf = requestAnimationFrame(step);
+      else startGameRef.current?.();
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
   /** Jump to the next track in the playlist. */
   const skipTrack = useCallback(() => {
     const a = musicRef.current;
