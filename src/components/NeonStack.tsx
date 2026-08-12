@@ -227,7 +227,7 @@ export default function NeonStack() {
   // localStorage after mount.
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState<Stats>({ bestScore: 0, bestLines: 0, bestTimeSec: 0, gamesPlayed: 0 });
-  const [mounted, setMounted] = useState(false);
+  const [, setMounted] = useState(false);
   const [unlocked, setUnlocked] = useState<string[]>([]);
   const [daily, setDaily] = useState<{ date: string; done: boolean }>({ date: "", done: false });
   useEffect(() => {
