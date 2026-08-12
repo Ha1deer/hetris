@@ -258,6 +258,19 @@ export default function NeonStack() {
     root.style.setProperty("--lane-top", t.laneTop);
     root.style.setProperty("--lane-bottom", t.laneBottom);
     root.style.setProperty("--board-frame", t.frame);
+    // UI chrome tokens — makes the theme repaint the whole app.
+    root.style.setProperty("--background", t.ui.background);
+    root.style.setProperty("--card", t.ui.card);
+    root.style.setProperty("--popover", t.ui.card);
+    root.style.setProperty("--accent", t.ui.accent);
+    root.style.setProperty("--primary", t.ui.primary);
+    root.style.setProperty("--primary-foreground", t.ui.primaryFg);
+    root.style.setProperty("--accent-foreground", t.ui.primaryFg);
+    root.style.setProperty("--secondary", t.ui.secondary);
+    root.style.setProperty("--muted", t.ui.muted);
+    root.style.setProperty("--border", t.ui.border);
+    root.style.setProperty("--ring", t.ui.primary);
+    root.style.setProperty("--foreground", t.ui.foreground);
   }, [settings.theme]);
 
   // Auto-dismiss intro after 2s (no tap-to-skip) → loading screen
