@@ -1876,10 +1876,10 @@ function AchievementsPanel({ unlocked, stats, onClose }: { unlocked: string[]; s
             </div>
           ))}
         </div>
-        {stats.top5 && stats.top5.length > 0 && (
+        {stats.topScores && stats.topScores.length > 0 && (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1">
             <p className="text-[9px] tracking-[0.3em] text-foreground/45">TOP RUNS</p>
-            {stats.top5.slice(0, 5).map((sc, i) => (
+            {stats.topScores.slice(0, 5).map((sc, i) => (
               <div key={i} className="flex justify-between text-xs">
                 <span className="text-foreground/50">#{i + 1}</span>
                 <span className="tabular-nums font-semibold">{sc}</span>
