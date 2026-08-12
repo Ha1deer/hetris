@@ -2154,6 +2154,12 @@ const SwapIcon = ({ size }: { size?: number }) => (
     <path d="M17 17H6l3 3" />
   </Svg>
 );
+const SkipIcon = ({ size }: { size?: number }) => (
+  <Svg size={size ?? 18}>
+    <path d="M5 4l10 8-10 8V4z" fill="currentColor" stroke="none" />
+    <rect x="17" y="4" width="2.5" height="16" rx="1" fill="currentColor" stroke="none" />
+  </Svg>
+);
 
 /* ---------- First-launch control picker ---------- */
 
