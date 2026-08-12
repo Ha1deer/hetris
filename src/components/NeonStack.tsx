@@ -239,12 +239,13 @@ export default function NeonStack() {
     setMounted(true);
   }, []);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
   const [showTips, setShowTips] = useState(false);
   const [showAch, setShowAch] = useState(false);
   const [loadPct, setLoadPct] = useState(0);
+  const [playPct, setPlayPct] = useState(0);
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const trackRef = useRef(0);
+  const [trackIdx, setTrackIdx] = useState(0);
 
   // Apply the selected gameplay theme as CSS variables on :root so both the
   // canvas (via cssVar) and the DOM chrome repaint together.
