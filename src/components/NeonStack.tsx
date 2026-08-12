@@ -1133,16 +1133,15 @@ export default function NeonStack() {
           </div>
         )}
 
-        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "loading" && phase !== "menu" && (
+        {phase !== "playing" && phase !== "pickControls" && phase !== "intro" && phase !== "loading" && phase !== "gameLoading" && phase !== "menu" && (
           <Overlay
             phase={phase}
             stats={stats}
             score={score}
             lines={lines}
             time={elapsed}
-            onStart={startGame}
+            onStart={beginPlay}
             onResume={() => setPhase("playing")}
-            onAbout={() => setShowAbout(true)}
             onSettings={() => setShowSettings(true)}
             onHome={() => setPhase("menu")}
             settings={settings}
@@ -1165,9 +1164,8 @@ export default function NeonStack() {
           score={score}
           lines={lines}
           time={elapsed}
-          onStart={startGame}
+          onStart={beginPlay}
           onResume={() => setPhase("playing")}
-          onAbout={() => setShowAbout(true)}
           onSettings={() => setShowSettings(true)}
           onHome={() => setPhase("menu")}
           settings={settings}
@@ -1178,8 +1176,50 @@ export default function NeonStack() {
         />
       )}
 
+      {/* Play loading screen — after tapping PLAY */}
+      {phase === "gameLoading" && (
+        <div className="fixed inset-0 z-[52] bg-black">
+          <img
+            src={playLoadingBg}
+            alt=""
+            aria-hidden
+            width={768}
+            height={1408}
+            className="absolute inset-0 w-full h-full object-cover"
+            draggable={false}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/90" />
+          <div className="absolute inset-x-0 bottom-[16%] flex flex-col items-center px-10">
+            <p className="text-[9px] tracking-[0.5em] text-foreground/60 mb-2">GET READY</p>
+            <h2
+              className="text-3xl font-black tracking-[0.35em]"
+              style={{
+                background: "linear-gradient(120deg, var(--accent), var(--primary), var(--accent))",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                animation: "hetris-shine 3s linear infinite",
+              }}
+            >
+              HETRIS
+            </h2>
+            <div className="mt-5 w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-100"
+                style={{
+                  width: `${playPct}%`,
+                  background: "linear-gradient(90deg, var(--primary), var(--accent))",
+                  boxShadow: "0 0 16px var(--accent)",
+                }}
+              />
+            </div>
+            <p className="mt-3 text-[9px] tracking-[0.45em] text-white/50">{Math.floor(playPct)}%</p>
+          </div>
+        </div>
+      )}
+
       {/* Control buttons — hidden in menu */}
-      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "pickControls" &&
+      {phase !== "menu" && phase !== "intro" && phase !== "loading" && phase !== "gameLoading" && phase !== "pickControls" &&
         (settings.control === "buttons" || settings.control === "both") && (
         <div className="relative z-10 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 shrink-0">
           <div className={`grid grid-cols-2 gap-3 items-center ${settings.handed === "left" ? "[direction:rtl]" : ""}`}>
@@ -1207,9 +1247,16 @@ export default function NeonStack() {
         </div>
       )}
 
-      {showSettings && <SettingsPanel settings={settings} setSettings={setSettings} onClose={() => setShowSettings(false)} stats={stats} />}
-      {showAbout && <AboutPanel onClose={() => setShowAbout(false)} />}
-      {showAch && <AchievementsPanel unlocked={unlocked} onClose={() => setShowAch(false)} />}
+      {showSettings && (
+        <SettingsPanel
+          settings={settings}
+          setSettings={setSettings}
+          onClose={() => setShowSettings(false)}
+          trackIdx={trackIdx}
+          onSkipTrack={skipTrack}
+        />
+      )}
+      {showAch && <AchievementsPanel unlocked={unlocked} stats={stats} onClose={() => setShowAch(false)} />}
     </div>
   );
 }
