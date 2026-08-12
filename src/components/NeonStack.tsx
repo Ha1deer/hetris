@@ -1706,30 +1706,66 @@ function SettingsPanel({
           </div>
         </div>
 
+
         <Row label="Ghost piece">
           <Toggle on={settings.ghost} onChange={(v) => setSettings({ ...settings, ghost: v })} />
         </Row>
-        <Row label="Sound">
+        <Row label="Sound effects">
           <Toggle on={settings.sound} onChange={(v) => setSettings({ ...settings, sound: v })} />
-        </Row>
-        <Row label="Music">
-          <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
         </Row>
         <Row label="Difficulty">
           <div className="flex gap-1">
             {(["easy", "normal", "hard"] as const).map((d) => (
               <button key={d} onClick={() => setSettings({ ...settings, difficulty: d })}
-                className={`px-2 py-1 text-xs rounded-md border capitalize ${settings.difficulty === d ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                className={`px-2.5 py-1.5 text-[11px] rounded-lg border capitalize transition ${settings.difficulty === d ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {d}
               </button>
             ))}
           </div>
         </Row>
-        <Row label="Controls">
+
+        {/* Music player */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[9px] tracking-[0.4em] text-foreground/50">MUSIC PLAYER</p>
+            <Toggle on={settings.music} onChange={(v) => setSettings({ ...settings, music: v })} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{TRACK_NAMES[trackIdx] ?? "Track"}</p>
+              <p className="text-[10px] text-foreground/45">
+                {settings.music ? "Playing" : "Muted"} · Track {trackIdx + 1}/{TRACKS.length}
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => setSettings({ ...settings, music: !settings.music })}
+                aria-label={settings.music ? "Pause music" : "Play music"}
+                className="w-10 h-10 grid place-items-center rounded-xl border border-white/10 bg-white/[0.05] text-foreground/85 active:scale-90 transition"
+              >
+                {settings.music ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+              </button>
+              <button
+                onClick={onSkipTrack}
+                aria-label="Skip track"
+                className="w-10 h-10 grid place-items-center rounded-xl text-primary-foreground active:scale-90 transition"
+                style={{ background: "linear-gradient(120deg, var(--primary), var(--accent))" }}
+              >
+                <SkipIcon size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
+        )}
+
+        {tab === "controls" && (
+        <>
+        <Row label="Control mode">
           <div className="flex gap-1">
             {(["buttons", "swipe", "both"] as ControlMode[]).map((m) => (
               <button key={m} onClick={() => setSettings({ ...settings, control: m })}
-                className={`px-2 py-1 text-xs rounded-md border ${settings.control === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                className={`px-2.5 py-1.5 text-[11px] rounded-lg border capitalize transition ${settings.control === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {m}
               </button>
             ))}
@@ -1739,7 +1775,7 @@ function SettingsPanel({
           <div className="flex gap-1">
             {(["right", "left"] as const).map((m) => (
               <button key={m} onClick={() => setSettings({ ...settings, handed: m })}
-                className={`px-3 py-1 text-xs rounded-md border capitalize ${settings.handed === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
+                className={`px-3 py-1.5 text-[11px] rounded-lg border capitalize transition ${settings.handed === m ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>
                 {m}
               </button>
             ))}
@@ -1748,15 +1784,45 @@ function SettingsPanel({
         <Row label={`Swipe sensitivity (${settings.swipeSensitivity}px)`}>
           <input type="range" min={12} max={48} step={2} value={settings.swipeSensitivity}
             onChange={(e) => setSettings({ ...settings, swipeSensitivity: Number(e.target.value) })}
-            className="w-32 accent-primary" />
+            className="w-28 accent-primary" />
         </Row>
 
-        <div className="pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
-          <div className="flex justify-between"><span>Best score</span><span className="text-foreground tabular-nums">{stats.bestScore}</span></div>
-          <div className="flex justify-between"><span>Best lines</span><span className="text-foreground tabular-nums">{stats.bestLines}</span></div>
-          <div className="flex justify-between"><span>Best time</span><span className="text-foreground tabular-nums">{Math.floor(stats.bestTimeSec / 60)}:{String(stats.bestTimeSec % 60).padStart(2, "0")}</span></div>
-          <div className="flex justify-between"><span>Games played</span><span className="text-foreground tabular-nums">{stats.gamesPlayed}</span></div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+          <p className="text-[9px] tracking-[0.4em] text-foreground/50 mb-3">TOUCH TIPS</p>
+          <ul className="space-y-2.5 text-left text-xs">
+            <Tip icon={<ChevronIcon dir="left" />}><b>Swipe left / right</b> — move piece</Tip>
+            <Tip icon={<RotateIcon />}><b>Tap</b> — rotate piece</Tip>
+            <Tip icon={<SoftDropIcon />}><b>Swipe down</b> — soft drop</Tip>
+            <Tip icon={<DropIcon />}><b>Fast swipe down</b> — hard drop</Tip>
+            <Tip icon={<SwapIcon />}><b>Buttons</b> — D-pad moves, centre rotates, big key hard-drops</Tip>
+          </ul>
         </div>
+        </>
+        )}
+
+        {tab === "about" && (
+        <div className="text-center space-y-4 py-2">
+          <h1
+            className="text-4xl font-black tracking-[0.3em]"
+            style={{
+              background: "linear-gradient(120deg, var(--primary), var(--accent))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            HETRIS
+          </h1>
+          <p className="text-[10px] tracking-[0.3em] text-muted-foreground">A FALLING BLOCK PUZZLE</p>
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-[10px] tracking-[0.4em] text-muted-foreground/70 mb-2">DEVELOPED BY</p>
+            <p className="text-3xl font-bold tracking-[0.25em]" style={{ color: "var(--accent)", textShadow: "0 0 18px var(--accent)" }}>
+              HAIDER
+            </p>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60">Offline · Ad-free · Pure skill</p>
+        </div>
+        )}
+
       </div>
     </div>
   );
