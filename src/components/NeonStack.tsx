@@ -27,11 +27,21 @@ import {
 } from "@/lib/tetris";
 
 type ControlMode = "buttons" | "swipe" | "both";
-type Phase = "intro" | "loading" | "pickControls" | "menu" | "playing" | "paused" | "over" | "about";
+type Phase = "intro" | "loading" | "pickControls" | "menu" | "gameLoading" | "playing" | "paused" | "over" | "about";
 export type ThemeKey = "space" | "aurora" | "sunset";
 
 /** Gameplay themes — each one repaints the board, pieces and glow. */
-const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>; glow: string; laneTop: string; laneBottom: string; frame: string; swatch: string[] }> = {
+const THEMES: Record<ThemeKey, {
+  name: string;
+  pieces: Record<PieceKey, string>;
+  glow: string;
+  laneTop: string;
+  laneBottom: string;
+  frame: string;
+  swatch: string[];
+  /** UI chrome — repaints the whole app, not just the board. */
+  ui: { background: string; card: string; accent: string; primary: string; secondary: string; muted: string; border: string; foreground: string; primaryFg: string };
+}> = {
   space: {
     name: "Space",
     pieces: { I: "#57c7ff", O: "#ffd76a", T: "#e07bff", S: "#6ef2a6", Z: "#ff6a5e", J: "#7f8cff", L: "#ffa845" },
@@ -40,6 +50,13 @@ const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>;
     laneBottom: "rgba(255,180,60,0.08)",
     frame: "rgba(255,196,80,0.55)",
     swatch: ["#03060f", "#0a1330", "#f0b429", "#ffe6a7"],
+    ui: {
+      background: "oklch(0.10 0.04 250)", card: "oklch(0.14 0.05 250)",
+      accent: "oklch(0.88 0.18 95)", primary: "oklch(0.85 0.17 85)",
+      secondary: "oklch(0.30 0.08 250)", muted: "oklch(0.22 0.05 250)",
+      border: "oklch(0.30 0.06 250)", foreground: "oklch(0.97 0.02 90)",
+      primaryFg: "oklch(0.12 0.04 250)",
+    },
   },
   aurora: {
     name: "Aurora Ice",
@@ -49,6 +66,13 @@ const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>;
     laneBottom: "rgba(90,140,255,0.09)",
     frame: "rgba(150,240,255,0.55)",
     swatch: ["#02100f", "#062033", "#7de8ff", "#d8fff4"],
+    ui: {
+      background: "oklch(0.11 0.04 220)", card: "oklch(0.16 0.05 215)",
+      accent: "oklch(0.90 0.13 200)", primary: "oklch(0.86 0.14 195)",
+      secondary: "oklch(0.30 0.07 215)", muted: "oklch(0.22 0.05 215)",
+      border: "oklch(0.32 0.06 210)", foreground: "oklch(0.97 0.02 200)",
+      primaryFg: "oklch(0.13 0.04 220)",
+    },
   },
   sunset: {
     name: "Retro Sunset",
@@ -58,6 +82,13 @@ const THEMES: Record<ThemeKey, { name: string; pieces: Record<PieceKey, string>;
     laneBottom: "rgba(255,190,80,0.09)",
     frame: "rgba(255,140,110,0.55)",
     swatch: ["#170617", "#3a0b3a", "#ff5d8f", "#ffd166"],
+    ui: {
+      background: "oklch(0.12 0.06 330)", card: "oklch(0.18 0.08 325)",
+      accent: "oklch(0.75 0.20 10)", primary: "oklch(0.80 0.16 45)",
+      secondary: "oklch(0.32 0.10 320)", muted: "oklch(0.24 0.08 325)",
+      border: "oklch(0.36 0.10 330)", foreground: "oklch(0.97 0.02 40)",
+      primaryFg: "oklch(0.15 0.06 330)",
+    },
   },
 };
 
