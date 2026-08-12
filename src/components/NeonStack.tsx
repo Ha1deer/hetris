@@ -754,20 +754,11 @@ export default function NeonStack() {
   }, []);
 
   const colors = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    return {
-      I: cssVar("--piece-i"),
-      O: cssVar("--piece-o"),
-      T: cssVar("--piece-t"),
-      S: cssVar("--piece-s"),
-      Z: cssVar("--piece-z"),
-      J: cssVar("--piece-j"),
-      L: cssVar("--piece-l"),
-      bg: cssVar("--background"),
-      grid: cssVar("--border"),
-      panel: cssVar("--card"),
-    } as Record<string, string>;
-  }, [settings.theme, mounted]);
+    // Read straight from the theme table (not computed CSS vars) so a theme
+    // switch repaints the canvas on the very same render.
+    const t = THEMES[settings.theme] ?? THEMES.space;
+    return { ...t.pieces } as Record<string, string>;
+  }, [settings.theme]);
 
   const drawCell = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, key: PieceKey, opts: { ghost?: boolean } = {}) => {
     const col = colors?.[key] || "#fff";
