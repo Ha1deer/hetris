@@ -434,6 +434,8 @@ export default function NeonStack() {
     } catch {}
   }, []);
 
+  useEffect(() => { startGameRef.current = startGame; }, [startGame]);
+
   const spawnNext = useCallback(() => {
     const key = bagRef.current.next();
     nextRef.current = bagRef.current.peek(5).slice();
